@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){try{var a=JSON.parse(sessionStorage.getItem("arambhika_auth")||"null");if(!a||!a.role){location.replace("login.html");return;}window.__AUTH=a;}catch(e){location.replace("login.html");}})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Content Generator — Arambhika Enablers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+.topbar h2 { font-size:18px; font-weight:700; }
+.content { padding:24px 28px; flex:1; max-width:1320px; }
+
+.layout { display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start; }
+@media (max-width:840px) { .layout { grid-template-columns:1fr; } }
+
+.layout-3col { display:grid; grid-template-columns:300px 300px minmax(320px,1fr); gap:20px; align-items:start; }
+@media (max-width:1180px) { .layout-3col { grid-template-columns:1fr 1fr; } }
+@media (max-width:760px) { .layout-3col { grid-template-columns:1fr; } }
+
+.section-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#6366f1; margin:0 0 16px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+.field { margin-bottom:14px; }
+.field label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.3px; }
+.field .hint, .hint { font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.4; }
+input[type=text], textarea, select {
+  width:100%; border:1px solid var(--border); border-radius:8px; padding:9px 11px;
+  font-size:13.5px; font-family:inherit; outline:none; color:var(--text); background:#fff;
+}
+input[type=text]:focus, textarea:focus, select:focus { border-color:#6366f1; }
+textarea { resize:vertical; min-height:90px; line-height:1.5; }
+.row { display:flex; gap:10px; }
+.row .field { flex:1; }
+.checkbox-row { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text); margin-bottom:14px; }
+
+.btn { padding:10px 18px; border-radius:8px; font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); }
+.btn-primary { background:#6366f1; color:#fff; border:none; width:100%; }
+.btn-primary:hover { background:#4f46e5; }
+.btn-primary:disabled { background:#c7c9f5; cursor:not-allowed; }
+.btn-sm { padding:6px 12px; font-size:12px; }
+
+.result-panel { min-height:140px; display:flex; align-items:center; justify-content:center; }
+.result-empty { color:var(--muted); font-size:13.5px; text-align:center; padding:18px 20px; }
+.spinner { width:32px; height:32px; border:3px solid #e2e8f0; border-top-color:#6366f1; border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.error-box { background:#fdeaea; color:#a3221f; border-radius:8px; padding:12px 14px; font-size:13px; }
+
+.result-set { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; width:100%; }
+.result-card { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--surface); }
+.result-card img { width:100%; border-radius:8px; display:block; margin-bottom:8px; border:1px solid var(--border); }
+.result-card .slide-tag { font-size:10.5px; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
+.result-meta { font-size:11.5px; color:var(--muted); margin-bottom:8px; }
+.result-actions { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+.feedback-row { display:flex; gap:6px; border-top:1px solid var(--border); padding-top:10px; }
+.feedback-row input { flex:1; font-size:12.5px; padding:7px 9px; }
+.feedback-row button { white-space:nowrap; }
+
+.template-row { display:flex; gap:8px; margin-bottom:14px; }
+.template-btn { flex:1; padding:9px 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:12.5px; font-weight:600; cursor:pointer; color:var(--muted); text-align:center; }
+.template-btn.active { border-color:#6366f1; background:#eef2ff; color:#4338ca; }
+
+.publish-card { margin-top:16px; }
+.publish-card h3 { font-size:13px; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); margin:0 0 10px; }
+.publish-card textarea { min-height:60px; margin-bottom:10px; }
+.publish-note { font-size:11.5px; color:var(--muted); margin-top:8px; }
+.btn-publish { background:#16a34a; color:#fff; border:none; }
+.btn-publish:hover { background:#15803d; }
+.btn-publish:disabled { background:#bbf7d0; cursor:not-allowed; }
+
+.gallery { margin-top:24px; }
+.gallery h3 { font-size:13px; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); margin:0 0 12px; }
+.gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+.gallery-item { border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; background:var(--surface); }
+.gallery-item img { width:100%; height:110px; object-fit:cover; display:block; }
+.gallery-item .cap { padding:6px 8px; font-size:10.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.ref-section { margin-top:20px; }
+.ref-search { margin-bottom:10px; }
+.ref-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; max-height:320px; overflow-y:auto; padding:2px; }
+.ref-item { border:2px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; background:var(--surface); transition:border-color .15s; }
+.ref-item:hover { border-color:#a5b4fc; }
+.ref-item.selected { border-color:#6366f1; box-shadow:0 0 0 2px rgba(99,102,241,.25); }
+.ref-item img { width:100%; height:80px; object-fit:cover; display:block; background:#f1f5f9; }
+.ref-item .cap { padding:5px 6px; font-size:10.5px; }
+.ref-item .cap .sku { font-weight:700; color:var(--text); display:block; }
+.ref-item .cap .name { color:var(--muted); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ref-selected-bar { display:none; flex-direction:column; gap:8px; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:10px 12px; margin-bottom:10px; font-size:12.5px; }
+.ref-selected-top { display:flex; align-items:center; gap:10px; }
+.ref-selected-top img { width:32px; height:32px; object-fit:cover; border-radius:5px; }
+.ref-selected-top button { margin-left:auto; background:none; border:none; color:#6366f1; font-size:12px; font-weight:600; cursor:pointer; }
+.ref-context { font-size:11.5px; color:var(--muted); line-height:1.5; border-top:1px solid #c7d2fe; padding-top:8px; }
+.ref-context strong { color:var(--text); }
+.ref-empty { font-size:12.5px; color:var(--muted); padding:12px 4px; }
+
+.toast { position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; font-weight:500; z-index:999; opacity:0; transition:opacity .25s; pointer-events:none; }
+.toast.show { opacity:1; }
+
+.mode-tabs { display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--border); }
+.mode-tab { padding:10px 4px; margin-bottom:-1px; border:none; background:none; font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+.mode-tab.active { color:#6366f1; border-bottom-color:#6366f1; }
+
+.caption-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.caption-row label { margin:0; }
+.li-result textarea { min-height:220px; }
+.li-note { font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.4; }
+.li-status { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.li-status .dot { width:7px; height:7px; border-radius:50%; background:#cbd5e1; display:inline-block; }
+.li-status .dot.on { background:#16a34a; }
+.li-status a.btn-sm { text-decoration:none; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><h1>Arambhika</h1><p>Enablers Dashboard</p></div>
+  <nav class="sidebar-nav">
+    <a href="image-generator.html" class="nav-link active"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><circle cx="8.5" cy="9.5" r="1.5" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15l-5-5L5 21"/></svg>Content Generator</a>
+    <a href="products.html" class="nav-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>Products</a>
+  </nav>
+</aside>
+<div class="sidebar-overlay" id="sbOverlay" onclick="document.querySelector('.sidebar').classList.remove('open');this.classList.remove('show')"></div>
+
+<div class="main">
+  <div class="topbar">
+    <h2>Content Generator</h2>
+    <button class="btn btn-sm" onclick="sessionStorage.removeItem('arambhika_auth');location.replace('login.html');" title="Sign out">&#9211; Logout</button>
+  </div>
+
+  <div class="content">
+    <div class="mode-tabs">
+      <button type="button" class="mode-tab active" id="tabBtnInstagram" onclick="switchMode('instagram')">Instagram — Image &amp; Caption</button>
+      <button type="button" class="mode-tab" id="tabBtnLinkedin" onclick="switchMode('linkedin')">LinkedIn — Post</button>
+    </div>
+
+    <div id="modeInstagram" class="layout-3col">
+      <div class="card">
+        <h3 class="section-title">1 · Generation Settings</h3>
+        <div class="field">
+          <label>Model ID</label>
+          <input type="text" id="fModel" placeholder="e.g. dola-seedream-5-0-pro-260628" value="dola-seedream-5-0-pro-260628">
+        </div>
+        <div class="field">
+          <label>Template</label>
+          <div class="template-row">
+            <button type="button" class="template-btn active" id="tplPostBtn" onclick="selectTemplate('post')">Instagram Post</button>
+            <button type="button" class="template-btn" id="tplCarouselBtn" onclick="selectTemplate('carousel')">Instagram Carousel</button>
+          </div>
+        </div>
+        <div class="field" id="slideCountField" style="display:none">
+          <label>Slides</label>
+          <select id="fSlideCount">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Prompt</label>
+          <textarea id="fPrompt" placeholder="Describe the image you want..." rows="8"></textarea>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="fWatermark">
+          <label for="fWatermark" style="margin:0;text-transform:none;font-weight:400;color:var(--text)">Add "AI generated" watermark</label>
+        </div>
+        <button class="btn btn-primary" id="genBtn" onclick="generateImage()">Generate</button>
+      </div>
+
+      <div class="card">
+        <h3 class="section-title">2 · Reference Product</h3>
+        <div class="ref-section" style="margin-top:0">
+          <div class="hint" style="margin:-2px 0 8px">Optional. Only products with more than 50kg in stock, or flagged "On Request" in the Products tab, are shown here — so we never post about something we can't actually fulfill.</div>
+          <div class="ref-selected-bar" id="refSelectedBar">
+            <div class="ref-selected-top">
+              <img id="refSelectedImg" src="" alt="">
+              <span id="refSelectedLabel"></span>
+              <button onclick="clearReference()">Clear</button>
+            </div>
+            <div class="ref-context" id="refContext"></div>
+          </div>
+          <input type="text" id="refSearch" class="ref-search" placeholder="Search by SKU or name..." oninput="renderRefGrid()">
+          <div class="ref-grid" id="refGrid"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 class="section-title">3 · Generated Image</h3>
+          <div class="result-panel" id="resultPanel">
+            <div class="result-empty">Enter a prompt and click Generate.<br>Images take a few seconds to a minute depending on model and size.</div>
+          </div>
+        </div>
+
+        <div class="card publish-card" id="publishCard" style="display:none">
+          <h3>Approve &amp; Post to Instagram</h3>
+          <div class="caption-row">
+            <label style="text-transform:none;font-size:12px;color:var(--muted)">Caption</label>
+            <button type="button" class="btn btn-sm" id="genCaptionBtn" onclick="generateCaption()">Generate caption</button>
+          </div>
+          <textarea id="fCaption" placeholder="Caption for the post... or click Generate caption"></textarea>
+          <button class="btn btn-publish" id="publishBtn" onclick="publishToInstagram()">Approve &amp; Post to Instagram</button>
+          <div class="publish-note" id="publishNote"></div>
+        </div>
+
+        <div class="gallery" id="galleryWrap" style="display:none">
+          <h3>This session</h3>
+          <div class="gallery-grid" id="galleryGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="modeLinkedin" class="layout-3col" style="display:none">
+      <div class="card">
+        <h3 class="section-title">1 · Post Brief</h3>
+        <div class="field">
+          <label>Topic / brief</label>
+          <textarea id="liTopic" placeholder="e.g. Announcing our new NP5 pure nickel strip for EV battery pack assembly — talk about plating options and typical MOQ" rows="6"></textarea>
+        </div>
+        <button class="btn btn-primary" id="liGenBtn" onclick="generateLinkedInPost()">Generate Post</button>
+      </div>
+
+      <div class="card">
+        <h3 class="section-title">2 · Reference Product</h3>
+        <div class="ref-section" style="margin-top:0">
+          <div class="hint" style="margin:-2px 0 8px">Optional — folds real price/spec facts into the post.</div>
+          <div class="ref-selected-bar" id="liRefSelectedBar">
+            <div class="ref-selected-top">
+              <img id="liRefSelectedImg" src="" alt="">
+              <span id="liRefSelectedLabel"></span>
+              <button onclick="clearLiReference()">Clear</button>
+            </div>
+            <div class="ref-context" id="liRefContext"></div>
+          </div>
+          <input type="text" id="liRefSearch" class="ref-search" placeholder="Search by SKU or name..." oninput="renderLiRefGrid()">
+          <div class="ref-grid" id="liRefGrid"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card li-result" id="liResultPanel">
+          <h3 class="section-title">3 · Generated Post</h3>
+          <div class="field" style="margin-bottom:10px">
+            <textarea id="liPostText" placeholder="Click Generate Post — the draft will appear here, editable before you post it yourself." rows="12"></textarea>
+          </div>
+          <div class="li-status" id="liStatus">Checking LinkedIn connection…</div>
+          <div class="result-actions" style="margin-top:10px">
+            <button class="btn btn-sm" id="liCopyBtn" onclick="copyLinkedInPost()">Copy post</button>
+            <button class="btn btn-publish btn-sm" id="liPublishBtn" onclick="publishToLinkedIn()" disabled>Post to LinkedIn</button>
+          </div>
+          <div class="publish-note" id="liPublishNote"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let gallery = [];
+let allProducts = [];
+let selectedRef = null; // full product row + filename
+const DEFAULT_SIZE = '1K';
+const DEFAULT_REGION = 'ap-southeast-1';
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function loadProductsForRef() {
+  try {
+    const res = await fetch('/api/products');
+    const body = await res.json();
+    allProducts = (body.data || []).filter(p => {
+      try { return JSON.parse(p.images || '[]').length > 0; } catch (e) { return false; }
+    });
+  } catch (e) { allProducts = []; }
+  renderRefGrid();
+  renderLiRefGrid();
+}
+
+// ── Tabs ─────────────────────────────────────────────────────
+function switchMode(mode) {
+  document.getElementById('tabBtnInstagram').classList.toggle('active', mode === 'instagram');
+  document.getElementById('tabBtnLinkedin').classList.toggle('active', mode === 'linkedin');
+  document.getElementById('modeInstagram').style.display = mode === 'instagram' ? 'grid' : 'none';
+  document.getElementById('modeLinkedin').style.display = mode === 'linkedin' ? 'grid' : 'none';
+}
+
+// Instagram tab only shows products we can actually fulfill from stock:
+// more than 50kg on hand, or explicitly flagged "On Request" (not
+// inventory-tracked, fulfilled manually). Prevents posting about
+// something a customer then can't get.
+function isEligibleForInstagram(p) {
+  return (p.unit === 'KG' && (p.quantity || 0) > 50) || !!p.flag_for_website;
+}
+
+function renderRefGrid() {
+  const q = document.getElementById('refSearch').value.trim().toLowerCase();
+  const grid = document.getElementById('refGrid');
+  const filtered = allProducts.filter(isEligibleForInstagram).filter(p =>
+    !q || (p.sku || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
+  );
+  if (!filtered.length) { grid.innerHTML = '<div class="ref-empty">No eligible products (need &gt;50kg in stock, or "On Request" flag) match.</div>'; return; }
+  grid.innerHTML = filtered.map(p => {
+    const imgs = JSON.parse(p.images || '[]');
+    const thumb = imgs[0];
+    const isSel = selectedRef && selectedRef.id === p.id;
+    return `
+      <div class="ref-item ${isSel ? 'selected' : ''}" onclick="selectReference(${p.id})">
+        <img src="/uploads/${esc(thumb)}" alt="${esc(p.name)}">
+        <div class="cap"><span class="sku">${esc(p.sku)}</span><span class="name">${esc(p.name)}</span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectReference(productId) {
+  const p = allProducts.find(x => x.id === productId);
+  if (!p) return;
+  const imgs = JSON.parse(p.images || '[]');
+  selectedRef = { ...p, filename: imgs[0] };
+
+  const bar = document.getElementById('refSelectedBar');
+  bar.style.display = 'flex';
+  document.getElementById('refSelectedImg').src = '/uploads/' + selectedRef.filename;
+  document.getElementById('refSelectedLabel').textContent = `${p.sku} — ${p.name}`;
+  document.getElementById('refContext').innerHTML = buildContextHtml(p);
+  renderRefGrid();
+}
+
+function clearReference() {
+  selectedRef = null;
+  document.getElementById('refSelectedBar').style.display = 'none';
+  renderRefGrid();
+}
+
+// Same facts a human would pull from the products page before drafting a
+// prompt by hand — real price/MOQ/dimensions, not invented ones.
+function buildContextHtml(p) {
+  const priceLine = p.price ? `₹${esc(p.price)}${p.new_price ? ' (offer: ₹'+esc(p.new_price)+')' : ''}/${esc(p.unit||'unit')}, MOQ ${esc(p.min_quantity||1)}${esc(p.unit||'')}` : '';
+  const parts = [
+    `<strong>${esc(p.name)}</strong> (${esc(p.sku)}, ${esc(p.category||'')})`,
+    p.dimensions ? `Dimensions: ${esc(p.dimensions)}` : '',
+    priceLine,
+    p.details ? esc(p.details) : '',
+    p.applications ? `Applications: ${esc(p.applications)}` : '',
+  ].filter(Boolean);
+  return parts.join('<br>');
+}
+
+function buildProductContextText(p) {
+  const priceLine = p.price ? `Price: Rs.${p.price}${p.new_price ? ' (offer: Rs.'+p.new_price+')' : ''}/${p.unit||'unit'}, MOQ ${p.min_quantity||1}${p.unit||''}.` : '';
+  return [
+    `Real product being referenced: ${p.name} (SKU ${p.sku}, category ${p.category||''}).`,
+    p.dimensions ? `Dimensions: ${p.dimensions}.` : '',
+    priceLine,
+    p.details ? `Details: ${p.details}` : '',
+    p.applications ? `Applications: ${p.applications}.` : '',
+    'Use these real facts for any spec text, price, or dimensions shown in the image — do not invent different numbers.',
+  ].filter(Boolean).join(' ');
+}
+
+// ── Templates ────────────────────────────────────────────────
+function postTemplate() {
+  return `A square 1:1 (1080×1080) Instagram product advertisement for Arambhika, an Indian B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and ESS battery pack makers. Clean industrial/technical brand treatment, professional B2B tone.
+
+Reference product: reproduce the supplied product photo exactly as shot — do not alter, restyle, relight, crop the object, or invent details. Preserve true material finish (metallic sheen, plating tone, surface texture), exact proportions, edge profile, hole pattern, and thickness. No added reflections, no fictional variants, no extra units. Cut it out cleanly from its original background with a soft, natural contact shadow.
+
+Background: flat off-white to light cool-grey, with a very subtle technical grid or fine diagonal facet pattern at low opacity; a faint oversized brand mark watermarked behind the composition. No clutter, no gradients that compete with the product.
+
+Composition: product placed slightly off-center with generous breathing room on all sides; nothing crowds or overlaps the product.
+
+Logo (top-left corner): Arambhika wordmark, small and clean, with comfortable margin from the edge.
+
+Headline (top, right of logo or directly beneath): "[PRODUCT NAME]" in heavy condensed sans-serif, all caps, dark charcoal, tight letter spacing. Optional thin accent rule beneath it.
+
+Spec callout badge (near the product, connected by a thin leader line): a compact rounded rectangle in the brand accent color with white text, three short lines — "[DIMENSIONS]" · "[PLATING/MATERIAL]" · "₹[PRICE]/KG". Small, technical, secondary to the headline.
+
+CTA line (bottom, centered): accent bar with white text — "WhatsApp +91-9315545821· arambhika.com" in a clean sans-serif, letter-spaced, single line.
+
+Style: crisp photo-and-vector hybrid, high contrast, restrained industrial palette (charcoal, steel grey, white, one accent color), sharp legible text rendering, generous negative space, no stock-photo people, no emoji, no decorative clutter.`;
+}
+
+function carouselTemplate() {
+  return `Generate a cohesive Instagram carousel for Arambhika Enablers, a B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and energy storage (ESS) battery pack makers in India.
+
+Keep the reference product photo accurate and unaltered in appearance — do not invent or distort product details, dimensions, or material finish.
+Apply the same clean industrial/technical brand treatment on every slide for a consistent set: dark navy or steel-grey backdrop with subtle brushed-metal texture, copper/orange accent color, bold sans-serif typography, engineering/spec-sheet aesthetic. Square 1:1 format (1080x1080). Keep the Arambhika Enablers wordmark in the same corner, and the same fonts and color grid, on every slide.`;
+}
+
+const SLIDE_FOCUS = [
+  'Hero shot — product centered with breathing room, bold headline with the product name, and a small spec callout badge (dimensions/price/MOQ) near the product.',
+  'Spec close-up — zoom on a key dimension or plating detail with clean measurement line annotations, same brand treatment, minimal text.',
+  'Application context — the product shown in the context of an EV/ESS battery pack assembly, with the CTA line "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  arambhika.com" at the bottom.',
+  'Comparison view — a size or variant comparison relevant to this product line, same visual system, brief callout text.',
+];
+
+let currentMode = 'post';
+
+function selectTemplate(mode) {
+  currentMode = mode;
+  document.getElementById('tplPostBtn').classList.toggle('active', mode === 'post');
+  document.getElementById('tplCarouselBtn').classList.toggle('active', mode === 'carousel');
+  document.getElementById('slideCountField').style.display = mode === 'carousel' ? 'block' : 'none';
+  document.getElementById('fPrompt').value = mode === 'post' ? postTemplate() : carouselTemplate();
+}
+
+// ── Generation ───────────────────────────────────────────────
+let currentSet = []; // [{ url, prompt, label, size }]
+
+async function callGenerate(opts) {
+  const res = await fetch('/api/byteplus/generate-image', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...opts, response_format: 'url' }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Generation failed');
+  const img = data.data && data.data[0];
+  if (!img || !img.url) throw new Error('No image returned');
+  return img;
+}
+
+async function generateImage() {
+  const model = document.getElementById('fModel').value.trim();
+  const basePrompt = document.getElementById('fPrompt').value.trim();
+  const size = DEFAULT_SIZE;
+  const region = DEFAULT_REGION;
+  const watermark = document.getElementById('fWatermark').checked;
+  const btn = document.getElementById('genBtn');
+  const panel = document.getElementById('resultPanel');
+
+  if (!model || !basePrompt) { toast('Model and prompt are both required', 'error'); return; }
+
+  const contextPrefix = selectedRef ? buildProductContextText(selectedRef) + '\n\n' : '';
+  const referenceImage = selectedRef ? selectedRef.filename : undefined;
+
+  btn.disabled = true; btn.textContent = 'Generating…';
+  panel.innerHTML = '<div class="spinner"></div>';
+  currentSet = [];
+
+  try {
+    if (currentMode === 'post') {
+      const slidePrompt = contextPrefix + basePrompt;
+      const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImage });
+      currentSet = [{ url: result.url, prompt: slidePrompt, label: null, size: result.size }];
+    } else {
+      const n = parseInt(document.getElementById('fSlideCount').value, 10);
+      for (let i = 0; i < n; i++) {
+        panel.innerHTML = `<div class="spinner"></div><div style="margin-top:10px;font-size:12.5px;color:var(--muted)">Generating slide ${i+1} of ${n}…</div>`;
+        const focus = SLIDE_FOCUS[i % SLIDE_FOCUS.length];
+        const slidePrompt = contextPrefix + basePrompt + `\n\nSlide ${i+1} of ${n} focus: ${focus}`;
+        const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImage });
+        currentSet.push({ url: result.url, prompt: slidePrompt, label: `Slide ${i+1} of ${n}`, size: result.size });
+      }
+    }
+    renderResultSet();
+    gallery.unshift(...currentSet.map(s => ({ url: s.url, prompt: s.prompt, model })));
+    renderGallery();
+    toast(currentMode === 'post' ? 'Image generated' : 'Carousel generated');
+  } catch (e) {
+    panel.innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generate';
+  }
+}
+
+async function regenerateSlide(i) {
+  const input = document.getElementById(`feedback-${i}`);
+  const feedback = input.value.trim();
+  if (!feedback) { toast('Add a comment describing what to change', 'error'); return; }
+
+  const model = document.getElementById('fModel').value.trim();
+  const size = DEFAULT_SIZE;
+  const region = DEFAULT_REGION;
+  const watermark = document.getElementById('fWatermark').checked;
+  const slide = currentSet[i];
+
+  const cards = document.querySelectorAll('#resultPanel .result-card');
+  if (cards[i]) cards[i].innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const newPrompt = slide.prompt + `\n\nRevision requested: ${feedback}`;
+    // Edit off the slide's own current image, not the original reference —
+    // each round of feedback builds on the last result.
+    const result = await callGenerate({ model, prompt: newPrompt, size, region, watermark, imageUrl: slide.url });
+    currentSet[i] = { ...slide, url: result.url, prompt: newPrompt, size: result.size };
+    renderResultSet();
+    gallery.unshift({ url: result.url, prompt: newPrompt, model });
+    renderGallery();
+    toast('Regenerated');
+  } catch (e) {
+    toast(e.message, 'error');
+    renderResultSet();
+  }
+}
+
+// ── Rendering ────────────────────────────────────────────────
+function renderResultSet() {
+  const panel = document.getElementById('resultPanel');
+  panel.innerHTML = `<div class="result-set">${currentSet.map((s, i) => resultCardHtml(s, i)).join('')}</div>`;
+  updatePublishCard();
+}
+
+function resultCardHtml(s, i) {
+  return `
+    <div class="result-card">
+      ${s.label ? `<div class="slide-tag">${esc(s.label)}</div>` : ''}
+      <img src="${esc(s.url)}" alt="">
+      <div class="result-meta">${esc(s.size || '')}${s.size ? ' · ' : ''}link valid 24h</div>
+      <div class="result-actions">
+        <a class="btn btn-sm" href="${esc(s.url)}" download target="_blank" rel="noopener">Download</a>
+        <button class="btn btn-sm" onclick="copyUrl('${esc(s.url)}')">Copy URL</button>
+      </div>
+      <div class="feedback-row">
+        <input type="text" id="feedback-${i}" placeholder="e.g. make the headline bigger, brighter background...">
+        <button class="btn btn-sm" onclick="regenerateSlide(${i})">Regenerate</button>
+      </div>
+    </div>
+  `;
+}
+
+function updatePublishCard() {
+  const card = document.getElementById('publishCard');
+  const note = document.getElementById('publishNote');
+  if (!currentSet.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  note.textContent = currentSet.length === 1
+    ? 'Posts 1 image to your Instagram feed. This is a real, public action and can\'t be undone from here.'
+    : `Posts a ${currentSet.length}-image carousel to your Instagram feed, in this slide order. This is a real, public action and can't be undone from here.`;
+}
+
+async function publishToInstagram() {
+  if (!currentSet.length) return;
+  const kind = currentSet.length === 1 ? 'this image' : `this ${currentSet.length}-image carousel`;
+  if (!confirm(`Post ${kind} to Instagram now? This is public and can't be undone from here.`)) return;
+
+  const caption = document.getElementById('fCaption').value.trim();
+  const btn = document.getElementById('publishBtn');
+  btn.disabled = true; btn.textContent = 'Posting…';
+  try {
+    const res = await fetch('/api/instagram/publish', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: currentSet.map(s => s.url), caption }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Publish failed');
+    toast('Posted to Instagram!');
+    document.getElementById('publishNote').textContent = `Posted — media ID ${data.mediaId}`;
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Approve & Post to Instagram';
+  }
+}
+
+async function generateCaption() {
+  if (!currentSet.length) { toast('Generate an image first', 'error'); return; }
+  const btn = document.getElementById('genCaptionBtn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try {
+    const res = await fetch('/api/anthropic/generate-caption', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: currentSet[0].prompt,
+        productContext: selectedRef ? buildProductContextText(selectedRef) : undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Caption generation failed');
+    document.getElementById('fCaption').value = data.caption;
+    toast('Caption generated');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generate caption';
+  }
+}
+
+// ── LinkedIn tab ─────────────────────────────────────────────
+let liSelectedRef = null;
+
+function renderLiRefGrid() {
+  const searchEl = document.getElementById('liRefSearch');
+  const grid = document.getElementById('liRefGrid');
+  if (!searchEl || !grid) return;
+  const q = searchEl.value.trim().toLowerCase();
+  const filtered = allProducts.filter(p =>
+    !q || (p.sku || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
+  );
+  if (!filtered.length) { grid.innerHTML = '<div class="ref-empty">No products found.</div>'; return; }
+  grid.innerHTML = filtered.map(p => {
+    const imgs = JSON.parse(p.images || '[]');
+    const thumb = imgs[0];
+    const isSel = liSelectedRef && liSelectedRef.id === p.id;
+    return `
+      <div class="ref-item ${isSel ? 'selected' : ''}" onclick="selectLiReference(${p.id})">
+        <img src="/uploads/${esc(thumb)}" alt="${esc(p.name)}">
+        <div class="cap"><span class="sku">${esc(p.sku)}</span><span class="name">${esc(p.name)}</span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectLiReference(productId) {
+  const p = allProducts.find(x => x.id === productId);
+  if (!p) return;
+  const imgs = JSON.parse(p.images || '[]');
+  liSelectedRef = { ...p, filename: imgs[0] };
+
+  const bar = document.getElementById('liRefSelectedBar');
+  bar.style.display = 'flex';
+  document.getElementById('liRefSelectedImg').src = '/uploads/' + liSelectedRef.filename;
+  document.getElementById('liRefSelectedLabel').textContent = `${p.sku} — ${p.name}`;
+  document.getElementById('liRefContext').innerHTML = buildContextHtml(p);
+  renderLiRefGrid();
+}
+
+function clearLiReference() {
+  liSelectedRef = null;
+  document.getElementById('liRefSelectedBar').style.display = 'none';
+  renderLiRefGrid();
+}
+
+async function generateLinkedInPost() {
+  const topic = document.getElementById('liTopic').value.trim();
+  if (!topic) { toast('Enter a topic or brief first', 'error'); return; }
+  const btn = document.getElementById('liGenBtn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try {
+    const res = await fetch('/api/anthropic/generate-linkedin-post', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic,
+        productContext: liSelectedRef ? buildProductContextText(liSelectedRef) : undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Post generation failed');
+    document.getElementById('liPostText').value = data.post;
+    toast('LinkedIn post generated');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generate Post';
+  }
+}
+
+function copyLinkedInPost() {
+  const text = document.getElementById('liPostText').value;
+  if (!text.trim()) { toast('Nothing to copy yet', 'error'); return; }
+  navigator.clipboard.writeText(text).then(() => toast('Post copied'));
+}
+
+let liConnected = false;
+
+async function checkLinkedInStatus() {
+  const el = document.getElementById('liStatus');
+  const btn = document.getElementById('liPublishBtn');
+  try {
+    const res = await fetch('/api/linkedin/status');
+    const data = await res.json();
+    liConnected = !!data.connected;
+    if (liConnected) {
+      el.innerHTML = '<span class="dot on"></span> LinkedIn connected';
+      btn.disabled = false;
+    } else if (data.configured) {
+      el.innerHTML = '<span class="dot"></span> LinkedIn not connected — <a class="btn btn-sm" href="/auth/linkedin" target="_blank" rel="noopener">Connect LinkedIn</a>';
+      btn.disabled = true;
+    } else {
+      el.innerHTML = '<span class="dot"></span> LinkedIn API keys not set in .env';
+      btn.disabled = true;
+    }
+  } catch (e) {
+    el.textContent = 'Could not check LinkedIn connection status';
+    btn.disabled = true;
+  }
+}
+
+async function publishToLinkedIn() {
+  const text = document.getElementById('liPostText').value.trim();
+  if (!text) { toast('Generate or write a post first', 'error'); return; }
+  if (!confirm('Post this to your LinkedIn profile now? This is public and can\'t be undone from here.')) return;
+
+  const btn = document.getElementById('liPublishBtn');
+  const note = document.getElementById('liPublishNote');
+  btn.disabled = true; btn.textContent = 'Posting…';
+  try {
+    const res = await fetch('/api/linkedin/publish', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Publish failed');
+    toast('Posted to LinkedIn!');
+    note.innerHTML = data.permalink ? `Posted — <a href="${esc(data.permalink)}" target="_blank" rel="noopener">view on LinkedIn</a>` : 'Posted.';
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Post to LinkedIn';
+  }
+}
+
+function loadFromGallery(url, prompt) {
+  currentSet = [{ url, prompt, label: null, size: null }];
+  renderResultSet();
+}
+
+function renderGallery() {
+  const wrap = document.getElementById('galleryWrap');
+  const grid = document.getElementById('galleryGrid');
+  if (!gallery.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  grid.innerHTML = gallery.map(g => `
+    <div class="gallery-item" onclick='loadFromGallery(${JSON.stringify(g.url)}, ${JSON.stringify(g.prompt)})'>
+      <img src="${esc(g.url)}" alt="${esc(g.prompt)}">
+      <div class="cap">${esc(g.prompt)}</div>
+    </div>
+  `).join('');
+}
+
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => toast('URL copied'));
+}
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = type ? `show ${type}` : 'show';
+  setTimeout(() => el.className = '', 2500);
+}
+
+selectTemplate('post');
+loadProductsForRef();
+checkLinkedInStatus();
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>

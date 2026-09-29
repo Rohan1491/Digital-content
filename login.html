@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Arambhika Enablers</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+  body { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#4f46e5,#7c3aed); }
+  .card { background:#fff; border-radius:16px; padding:36px 32px; width:100%; max-width:360px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .logo { text-align:center; margin-bottom:6px; font-size:22px; font-weight:800; color:#4f46e5; }
+  .sub  { text-align:center; font-size:13px; color:#6b7280; margin-bottom:26px; }
+  label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:6px; }
+  input { width:100%; padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px; font-size:14px; outline:none; transition:border-color .15s; }
+  input:focus { border-color:#4f46e5; }
+  button { width:100%; margin-top:16px; padding:12px; border:none; border-radius:10px; background:#4f46e5; color:#fff; font-size:14px; font-weight:700; cursor:pointer; transition:background .15s; }
+  button:hover { background:#4338ca; }
+  button:disabled { opacity:.6; cursor:default; }
+  .err { margin-top:12px; font-size:12px; color:#dc2626; text-align:center; min-height:16px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">Arambhika</div>
+    <div class="sub">Enablers Dashboard — sign in</div>
+    <form id="loginForm" onsubmit="return doLogin(event)">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" placeholder="Enter your password" autofocus autocomplete="current-password">
+      <button type="submit" id="loginBtn">Sign in</button>
+      <div class="err" id="err"></div>
+    </form>
+  </div>
+<script>
+// Already logged in? skip straight through
+(function(){
+  try {
+    const a = JSON.parse(sessionStorage.getItem('arambhika_auth')||'null');
+    if (a && a.role) location.replace('image-generator.html');
+  } catch(e) {}
+})();
+
+async function doLogin(ev) {
+  ev.preventDefault();
+  const pw = document.getElementById('pw').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('err');
+  err.textContent = '';
+  if (!pw) { err.textContent = 'Enter a password'; return false; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ password: pw }) });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Incorrect password');
+    sessionStorage.setItem('arambhika_auth', JSON.stringify({ role: d.role, name: d.name }));
+    location.href = 'image-generator.html';
+  } catch(e) {
+    err.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+  return false;
+}
+</script>
+</body>
+</html>

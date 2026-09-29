@@ -1,0 +1,21 @@
+{
+  "name": "digital-content",
+  "version": "1.0.0",
+  "description": "Arambhika Enablers Content Generator — Instagram/LinkedIn image + copy generation, saved to Drive",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "better-sqlite3": "^9.4.3",
+    "compression": "^1.7.4",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "googleapis": "^182.0.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
