@@ -7,7 +7,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const compression = require('compression');
-const { uploadImageFromUrl } = require('./lib/drive');
+const sharp = require('sharp');
+const { uploadImageBuffer } = require('./lib/drive');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -270,11 +271,27 @@ const BYTEPLUS_MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'im
 // app) so the path still resolves once this is deployed.
 const LOGO_PATH = path.join(__dirname, 'assets', 'arambhika-logo.jpeg');
 
+// Stamps the real logo file onto a generated image as a fixed corner
+// watermark — this is guaranteed pixel-perfect since it's the actual logo
+// asset, unlike asking the model to draw the logo into its composition.
+async function watermarkImage(buffer) {
+  const base = sharp(buffer);
+  const meta = await base.metadata();
+  const logoBuffer = await sharp(LOGO_PATH).resize({ width: Math.round(meta.width * 0.16) }).toBuffer();
+  const logoMeta = await sharp(logoBuffer).metadata();
+  const margin = Math.round(meta.width * 0.03);
+  return base.composite([{
+    input: logoBuffer,
+    left: meta.width - logoMeta.width - margin,
+    top: meta.height - logoMeta.height - margin,
+  }]).jpeg({ quality: 92 }).toBuffer();
+}
+
 app.post('/api/byteplus/generate-image', async (req, res) => {
   try {
     const key = process.env.BYTEPLUS_API_KEY;
     if (!key) return res.status(400).json({ error: 'BYTEPLUS_API_KEY not set in .env' });
-    const { model, size, watermark, response_format, region, referenceImages, imageUrl } = req.body;
+    const { model, size, response_format, region, referenceImages, imageUrl } = req.body;
     let { prompt } = req.body;
     if (!model || !prompt) return res.status(400).json({ error: 'model and prompt are required' });
 
@@ -319,24 +336,41 @@ app.post('/api/byteplus/generate-image', async (req, res) => {
         prompt,
         ...(image ? { image } : {}),
         size: size || '2K',
-        watermark: watermark !== false,
+        watermark: false, // BytePlus's own "AI generated" disclosure stamp — we stamp our own logo instead, below
         response_format: response_format || 'url',
       }),
     });
     const j = await r.json();
     if (!r.ok || j.error) return res.status(r.status || 500).json({ error: j.error?.message || j.error || 'BytePlus request failed' });
 
-    // Save every generated image to Drive. BytePlus's result URLs are only
-    // valid 24h, so this is the durable copy. Never let a Drive hiccup fail
-    // the generation the user is waiting on — log and move on.
+    // Stamp our logo onto every generated image and save a durable local +
+    // Drive copy — BytePlus's own result URLs are only valid 24h. rawUrl
+    // keeps the clean, unwatermarked BytePlus output so "regenerate with
+    // feedback" edits build on that instead of an image with our watermark
+    // already baked in. Never let a watermark/Drive hiccup fail the
+    // generation the user is waiting on — fall back to the raw BytePlus url
+    // and log it.
     if (Array.isArray(j.data)) {
+      const publicBase = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
       await Promise.all(j.data.map(async (item, i) => {
         if (!item.url) return;
+        item.rawUrl = item.url;
         try {
-          const drive = await uploadImageFromUrl(item.url, `${Date.now()}-${i}-${model}.jpg`);
-          if (drive) item.driveLink = drive.link;
+          const sourceRes = await fetch(item.url);
+          if (!sourceRes.ok) throw new Error(`Failed to download generated image (${sourceRes.status})`);
+          const sourceBuffer = Buffer.from(await sourceRes.arrayBuffer());
+          const watermarked = await watermarkImage(sourceBuffer);
+          const filename = `generated-${Date.now()}-${i}.jpg`;
+          fs.writeFileSync(path.join(uploadsDir, filename), watermarked);
+          item.url = `${publicBase}/uploads/${filename}`;
+          try {
+            const drive = await uploadImageBuffer(watermarked, filename, 'image/jpeg');
+            if (drive) item.driveLink = drive.link;
+          } catch (e) {
+            console.error('Drive upload failed:', e.message);
+          }
         } catch (e) {
-          console.error('Drive upload failed:', e.message);
+          console.error('Watermarking failed, using unwatermarked BytePlus url:', e.message);
         }
       }));
     }

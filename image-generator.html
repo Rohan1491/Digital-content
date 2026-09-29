@@ -170,10 +170,6 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
           <label>Prompt</label>
           <textarea id="fPrompt" placeholder="Describe the image you want..." rows="8"></textarea>
         </div>
-        <div class="checkbox-row">
-          <input type="checkbox" id="fWatermark">
-          <label for="fWatermark" style="margin:0;text-transform:none;font-weight:400;color:var(--text)">Add "AI generated" watermark</label>
-        </div>
         <button class="btn btn-primary" id="genBtn" onclick="generateImage()">Generate</button>
       </div>
 
@@ -481,7 +477,6 @@ async function generateImage() {
   const basePrompt = document.getElementById('fPrompt').value.trim();
   const size = DEFAULT_SIZE;
   const region = DEFAULT_REGION;
-  const watermark = document.getElementById('fWatermark').checked;
   const btn = document.getElementById('genBtn');
   const panel = document.getElementById('resultPanel');
 
@@ -497,8 +492,8 @@ async function generateImage() {
   try {
     if (currentMode === 'post') {
       const slidePrompt = contextPrefix + basePrompt;
-      const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImages });
-      currentSet = [{ url: result.url, prompt: slidePrompt, label: null, size: result.size }];
+      const result = await callGenerate({ model, prompt: slidePrompt, size, region, referenceImages });
+      currentSet = [{ url: result.url, rawUrl: result.rawUrl, prompt: slidePrompt, label: null, size: result.size }];
     } else {
       const n = parseInt(document.getElementById('fSlideCount').value, 10);
       const slideFocusList = selectedRefs.length ? SLIDE_FOCUS_REF : SLIDE_FOCUS_GENERAL;
@@ -506,8 +501,8 @@ async function generateImage() {
         panel.innerHTML = `<div class="spinner"></div><div style="margin-top:10px;font-size:12.5px;color:var(--muted)">Generating slide ${i+1} of ${n}…</div>`;
         const focus = slideFocusList[i % slideFocusList.length];
         const slidePrompt = contextPrefix + basePrompt + `\n\nSlide ${i+1} of ${n} focus: ${focus}`;
-        const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImages });
-        currentSet.push({ url: result.url, prompt: slidePrompt, label: `Slide ${i+1} of ${n}`, size: result.size });
+        const result = await callGenerate({ model, prompt: slidePrompt, size, region, referenceImages });
+        currentSet.push({ url: result.url, rawUrl: result.rawUrl, prompt: slidePrompt, label: `Slide ${i+1} of ${n}`, size: result.size });
       }
     }
     renderResultSet();
@@ -530,7 +525,6 @@ async function regenerateSlide(i) {
   const model = document.getElementById('fModel').value.trim();
   const size = DEFAULT_SIZE;
   const region = DEFAULT_REGION;
-  const watermark = document.getElementById('fWatermark').checked;
   const slide = currentSet[i];
 
   const cards = document.querySelectorAll('#resultPanel .result-card');
@@ -538,10 +532,11 @@ async function regenerateSlide(i) {
 
   try {
     const newPrompt = slide.prompt + `\n\nRevision requested: ${feedback}`;
-    // Edit off the slide's own current image, not the original reference —
-    // each round of feedback builds on the last result.
-    const result = await callGenerate({ model, prompt: newPrompt, size, region, watermark, imageUrl: slide.url });
-    currentSet[i] = { ...slide, url: result.url, prompt: newPrompt, size: result.size };
+    // Edit off the slide's own clean (unwatermarked) BytePlus output, not
+    // the locally watermarked copy — each round of feedback builds on the
+    // last result without the model having to work around our logo stamp.
+    const result = await callGenerate({ model, prompt: newPrompt, size, region, imageUrl: slide.rawUrl || slide.url });
+    currentSet[i] = { ...slide, url: result.url, rawUrl: result.rawUrl, prompt: newPrompt, size: result.size };
     renderResultSet();
     gallery.unshift({ url: result.url, prompt: newPrompt, model });
     renderGallery();
