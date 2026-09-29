@@ -325,6 +325,7 @@ function selectReference(productId) {
   const p = allProducts.find(x => x.id === productId);
   if (!p) return;
   const imgs = JSON.parse(p.images || '[]');
+  const wasTemplateText = isUneditedTemplateText(document.getElementById('fPrompt').value);
   selectedRef = { ...p, filename: imgs[0] };
 
   const bar = document.getElementById('refSelectedBar');
@@ -332,12 +333,15 @@ function selectReference(productId) {
   document.getElementById('refSelectedImg').src = '/uploads/' + selectedRef.filename;
   document.getElementById('refSelectedLabel').textContent = `${p.sku} — ${p.name}`;
   document.getElementById('refContext').innerHTML = buildContextHtml(p);
+  if (wasTemplateText) document.getElementById('fPrompt').value = currentTemplatePrompt();
   renderRefGrid();
 }
 
 function clearReference() {
+  const wasTemplateText = isUneditedTemplateText(document.getElementById('fPrompt').value);
   selectedRef = null;
   document.getElementById('refSelectedBar').style.display = 'none';
+  if (wasTemplateText) document.getElementById('fPrompt').value = currentTemplatePrompt();
   renderRefGrid();
 }
 
@@ -368,48 +372,83 @@ function buildProductContextText(p) {
 }
 
 // ── Templates ────────────────────────────────────────────────
-function postTemplate() {
-  return `A square 1:1 (1080×1080) Instagram product advertisement for Arambhika, an Indian B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and ESS battery pack makers. Clean industrial/technical brand treatment, professional B2B tone.
+// Two variants per mode: WithRef is used when a product reference photo is
+// selected (Seedream's "reference-based generation" — separate the Reference
+// Target to preserve from the Generated Scene Description, per the Seedream
+// 4.0 user guide), General is used when no reference is selected, so the
+// prompt never asks the model to "reproduce a supplied photo" that doesn't
+// exist.
+function postTemplateWithRef() {
+  return `An Instagram product advertisement, square 1:1 format, for "Arambhika Enablers" — an Indian B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and ESS battery pack makers. Clean industrial/technical brand treatment, professional B2B tone.
 
-Reference product: reproduce the supplied product photo exactly as shot — do not alter, restyle, relight, crop the object, or invent details. Preserve true material finish (metallic sheen, plating tone, surface texture), exact proportions, edge profile, hole pattern, and thickness. No added reflections, no fictional variants, no extra units. Cut it out cleanly from its original background with a soft, natural contact shadow.
+Reference target: the attached product photo. Reproduce it exactly as shot — do not alter, restyle, relight, crop the object, or invent details. Preserve the true material finish (metallic sheen, plating tone, surface texture), exact proportions, edge profile, hole pattern, and thickness. No added reflections, no fictional variants, no extra units. Cut it out cleanly from its original background with a soft, natural contact shadow.
 
-Background: flat off-white to light cool-grey, with a very subtle technical grid or fine diagonal facet pattern at low opacity; a faint oversized brand mark watermarked behind the composition. No clutter, no gradients that compete with the product.
-
-Composition: product placed slightly off-center with generous breathing room on all sides; nothing crowds or overlaps the product.
-
-Logo (top-left corner): Arambhika wordmark, small and clean, with comfortable margin from the edge.
-
-Headline (top, right of logo or directly beneath): "[PRODUCT NAME]" in heavy condensed sans-serif, all caps, dark charcoal, tight letter spacing. Optional thin accent rule beneath it.
-
-Spec callout badge (near the product, connected by a thin leader line): a compact rounded rectangle in the brand accent color with white text, three short lines — "[DIMENSIONS]" · "[PLATING/MATERIAL]" · "₹[PRICE]/KG". Small, technical, secondary to the headline.
-
-CTA line (bottom, centered): accent bar with white text — "WhatsApp +91-9315545821· arambhika.com" in a clean sans-serif, letter-spaced, single line.
+Generated scene: flat off-white to light cool-grey background, with a very subtle technical grid or fine diagonal facet pattern at low opacity, and a faint oversized brand mark watermarked behind the composition. Place the product slightly off-center with generous breathing room on all sides. In the top-left corner, add the "Arambhika" wordmark logo, small and clean. Add a headline reading "[PRODUCT NAME]" in heavy condensed sans-serif, all caps, dark charcoal, tight letter spacing, positioned at the top near the logo. Near the product, connected by a thin leader line, add a compact rounded spec-callout badge in the brand accent color with white text reading "[DIMENSIONS]" · "[PLATING/MATERIAL]" · "₹[PRICE]/KG". At the bottom, centered, add an accent bar with white text reading "WhatsApp +91-9315545821 · arambhika.com".
 
 Style: crisp photo-and-vector hybrid, high contrast, restrained industrial palette (charcoal, steel grey, white, one accent color), sharp legible text rendering, generous negative space, no stock-photo people, no emoji, no decorative clutter.`;
 }
 
-function carouselTemplate() {
-  return `Generate a cohesive Instagram carousel for Arambhika Enablers, a B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and energy storage (ESS) battery pack makers in India.
+function postTemplateGeneral() {
+  return `An Instagram brand-awareness post, square 1:1 format, for "Arambhika Enablers" — an Indian B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and ESS (energy storage system) battery pack makers, based in Greater Noida, India.
 
-Keep the reference product photo accurate and unaltered in appearance — do not invent or distort product details, dimensions, or material finish.
-Apply the same clean industrial/technical brand treatment on every slide for a consistent set: dark navy or steel-grey backdrop with subtle brushed-metal texture, copper/orange accent color, bold sans-serif typography, engineering/spec-sheet aesthetic. Square 1:1 format (1080x1080). Keep the Arambhika Enablers wordmark in the same corner, and the same fonts and color grid, on every slide.`;
+Scene: a clean technical product photograph of nickel strips and tin-coated copper busbars arranged in an organized industrial composition — coiled and cut nickel strip with a soft metallic sheen, alongside copper busbars, on a matte dark charcoal or steel-grey surface with subtle top-down studio lighting. No people, no clutter, no battery cells unless the image is specifically about pack assembly.
+
+Brand treatment: in the top-left corner, add the "Arambhika" wordmark logo, small and clean. Add a bold condensed sans-serif all-caps headline reading "[HEADLINE]" in dark charcoal with tight letter spacing. At the bottom, centered, add an accent bar with white text reading "WhatsApp +91-9315545821 · arambhika.com".
+
+Style: crisp industrial product photography, high contrast, restrained palette (charcoal, steel grey, white, one accent color), sharp legible text rendering, generous negative space, no stock-photo people, no emoji, no decorative clutter.`;
 }
 
-const SLIDE_FOCUS = [
+function carouselTemplateWithRef() {
+  return `A cohesive Instagram carousel, square 1:1 format, for "Arambhika Enablers" — a B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and energy storage (ESS) battery pack makers in India.
+
+Reference target: the attached product photo. Keep it accurate and unaltered across every slide — same material finish, proportions, and dimensions, no invented variants.
+
+Generated scene: apply the same clean industrial/technical brand treatment on every slide for a consistent set — dark navy or steel-grey backdrop with subtle brushed-metal texture, copper/orange accent color, bold sans-serif typography, engineering/spec-sheet aesthetic. Keep the "Arambhika" wordmark logo in the same corner, and the same fonts and color grid, on every slide.`;
+}
+
+function carouselTemplateGeneral() {
+  return `A cohesive Instagram carousel, square 1:1 format, for "Arambhika Enablers" — a B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV and energy storage (ESS) battery pack makers in India, based in Greater Noida.
+
+Scene: clean technical product photography of nickel strips and copper busbars in an organized industrial composition. No people, no battery cells unless a slide is specifically about pack assembly.
+
+Apply the same clean industrial/technical brand treatment on every slide for a consistent set: dark navy or steel-grey backdrop with subtle brushed-metal texture, copper/orange accent color, bold sans-serif typography, engineering/spec-sheet aesthetic. Keep the "Arambhika" wordmark logo in the same corner, and the same fonts and color grid, on every slide.`;
+}
+
+const SLIDE_FOCUS_REF = [
   'Hero shot — product centered with breathing room, bold headline with the product name, and a small spec callout badge (dimensions/price/MOQ) near the product.',
   'Spec close-up — zoom on a key dimension or plating detail with clean measurement line annotations, same brand treatment, minimal text.',
   'Application context — the product shown in the context of an EV/ESS battery pack assembly, with the CTA line "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  arambhika.com" at the bottom.',
   'Comparison view — a size or variant comparison relevant to this product line, same visual system, brief callout text.',
 ];
 
+const SLIDE_FOCUS_GENERAL = [
+  'Hero shot — nickel strips and copper busbars arranged in a bold hero composition, with a strong brand headline.',
+  'Manufacturing strength — a shot suggesting in-house plating and manufacturing capability (coils, precision tooling, clean production floor), same brand treatment, minimal text.',
+  'Application context — the components shown in the context of an EV/ESS battery pack assembly, with the CTA line "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  arambhika.com" at the bottom.',
+  'Range overview — a spread suggesting the breadth of sizes and types available (plated vs pure nickel strip, busbar variants), same visual system, brief callout text.',
+];
+
 let currentMode = 'post';
+
+// Builds the right template for the current tab + whether a reference
+// product is currently selected.
+function currentTemplatePrompt() {
+  if (currentMode === 'post') return selectedRef ? postTemplateWithRef() : postTemplateGeneral();
+  return selectedRef ? carouselTemplateWithRef() : carouselTemplateGeneral();
+}
+
+// Only auto-refresh the prompt box when it still holds one of the
+// generated templates verbatim — never overwrite a hand-edited prompt.
+function isUneditedTemplateText(v) {
+  return [postTemplateWithRef(), postTemplateGeneral(), carouselTemplateWithRef(), carouselTemplateGeneral()].includes(v);
+}
 
 function selectTemplate(mode) {
   currentMode = mode;
   document.getElementById('tplPostBtn').classList.toggle('active', mode === 'post');
   document.getElementById('tplCarouselBtn').classList.toggle('active', mode === 'carousel');
   document.getElementById('slideCountField').style.display = mode === 'carousel' ? 'block' : 'none';
-  document.getElementById('fPrompt').value = mode === 'post' ? postTemplate() : carouselTemplate();
+  document.getElementById('fPrompt').value = currentTemplatePrompt();
 }
 
 // ── Generation ───────────────────────────────────────────────
@@ -452,9 +491,10 @@ async function generateImage() {
       currentSet = [{ url: result.url, prompt: slidePrompt, label: null, size: result.size }];
     } else {
       const n = parseInt(document.getElementById('fSlideCount').value, 10);
+      const slideFocusList = selectedRef ? SLIDE_FOCUS_REF : SLIDE_FOCUS_GENERAL;
       for (let i = 0; i < n; i++) {
         panel.innerHTML = `<div class="spinner"></div><div style="margin-top:10px;font-size:12.5px;color:var(--muted)">Generating slide ${i+1} of ${n}…</div>`;
-        const focus = SLIDE_FOCUS[i % SLIDE_FOCUS.length];
+        const focus = slideFocusList[i % slideFocusList.length];
         const slidePrompt = contextPrefix + basePrompt + `\n\nSlide ${i+1} of ${n} focus: ${focus}`;
         const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImage });
         currentSet.push({ url: result.url, prompt: slidePrompt, label: `Slide ${i+1} of ${n}`, size: result.size });
