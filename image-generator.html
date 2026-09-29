@@ -139,8 +139,13 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
       <div class="card">
         <h3 class="section-title">1 · Generation Settings</h3>
         <div class="field">
-          <label>Model ID</label>
-          <input type="text" id="fModel" placeholder="e.g. dola-seedream-5-0-pro-260628" value="dola-seedream-5-0-pro-260628">
+          <label>Model</label>
+          <select id="fModel">
+            <option value="dola-seedream-5-0-pro-260628">Seedream 5 Pro</option>
+            <option value="seedream-5-0-260128">Seedream 5</option>
+            <option value="seedream-4-5-251128">Seedream 4.5</option>
+            <option value="seedream-4-0-20260415">Seedream 4</option>
+          </select>
         </div>
         <div class="field">
           <label>Template</label>
