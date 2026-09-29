@@ -270,7 +270,7 @@ let gallery = [];
 let allProducts = [];
 let selectedRefs = []; // array of { ...product row, filename }
 const MAX_REFS = 4;
-const DEFAULT_SIZE = '1K';
+const DEFAULT_SIZE = '2k'; // 1K/1k isn't a valid size tier for Seedream 5 Lite — 2k is the smallest size all three models accept
 const DEFAULT_REGION = 'ap-southeast-1';
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
