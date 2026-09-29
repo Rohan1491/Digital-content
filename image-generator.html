@@ -91,8 +91,13 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
 .ref-selected-top { display:flex; align-items:center; gap:10px; }
 .ref-selected-top img { width:32px; height:32px; object-fit:cover; border-radius:5px; }
 .ref-selected-top button { margin-left:auto; background:none; border:none; color:#6366f1; font-size:12px; font-weight:600; cursor:pointer; }
+.ref-chips { display:flex; flex-wrap:wrap; gap:6px; flex:1; }
+.ref-chip { display:flex; align-items:center; gap:5px; background:#fff; border:1px solid #c7d2fe; border-radius:6px; padding:3px 6px 3px 3px; font-size:11.5px; font-weight:600; color:var(--text); }
+.ref-chip img { width:22px; height:22px; object-fit:cover; border-radius:4px; }
+.ref-chip button { background:none; border:none; color:#6366f1; font-size:14px; line-height:1; cursor:pointer; padding:0 0 0 2px; }
 .ref-context { font-size:11.5px; color:var(--muted); line-height:1.5; border-top:1px solid #c7d2fe; padding-top:8px; }
 .ref-context strong { color:var(--text); }
+.ref-context hr { border:none; border-top:1px solid #c7d2fe; margin:6px 0; }
 .ref-empty { font-size:12.5px; color:var(--muted); padding:12px 4px; }
 
 .toast { position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; font-weight:500; z-index:999; opacity:0; transition:opacity .25s; pointer-events:none; }
@@ -173,14 +178,13 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
       </div>
 
       <div class="card">
-        <h3 class="section-title">2 · Reference Product</h3>
+        <h3 class="section-title">2 · Reference Products</h3>
         <div class="ref-section" style="margin-top:0">
-          <div class="hint" style="margin:-2px 0 8px">Optional. Only products with more than 50kg in stock, or flagged "On Request" in the Products tab, are shown here — so we never post about something we can't actually fulfill.</div>
+          <div class="hint" style="margin:-2px 0 8px">Optional — pick up to 4.</div>
           <div class="ref-selected-bar" id="refSelectedBar">
             <div class="ref-selected-top">
-              <img id="refSelectedImg" src="" alt="">
-              <span id="refSelectedLabel"></span>
-              <button onclick="clearReference()">Clear</button>
+              <div class="ref-chips" id="refChips"></div>
+              <button onclick="clearReference()">Clear all</button>
             </div>
             <div class="ref-context" id="refContext"></div>
           </div>
@@ -226,14 +230,13 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
       </div>
 
       <div class="card">
-        <h3 class="section-title">2 · Reference Product</h3>
+        <h3 class="section-title">2 · Reference Products</h3>
         <div class="ref-section" style="margin-top:0">
-          <div class="hint" style="margin:-2px 0 8px">Optional — folds real price/spec facts into the post.</div>
+          <div class="hint" style="margin:-2px 0 8px">Optional — pick up to 4. Folds real price/spec facts into the post.</div>
           <div class="ref-selected-bar" id="liRefSelectedBar">
             <div class="ref-selected-top">
-              <img id="liRefSelectedImg" src="" alt="">
-              <span id="liRefSelectedLabel"></span>
-              <button onclick="clearLiReference()">Clear</button>
+              <div class="ref-chips" id="liRefChips"></div>
+              <button onclick="clearLiReference()">Clear all</button>
             </div>
             <div class="ref-context" id="liRefContext"></div>
           </div>
@@ -265,7 +268,8 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
 <script>
 let gallery = [];
 let allProducts = [];
-let selectedRef = null; // full product row + filename
+let selectedRefs = []; // array of { ...product row, filename }
+const MAX_REFS = 4;
 const DEFAULT_SIZE = '1K';
 const DEFAULT_REGION = 'ap-southeast-1';
 
@@ -292,27 +296,19 @@ function switchMode(mode) {
   document.getElementById('modeLinkedin').style.display = mode === 'linkedin' ? 'grid' : 'none';
 }
 
-// Instagram tab only shows products we can actually fulfill from stock:
-// more than 50kg on hand, or explicitly flagged "On Request" (not
-// inventory-tracked, fulfilled manually). Prevents posting about
-// something a customer then can't get.
-function isEligibleForInstagram(p) {
-  return (p.unit === 'KG' && (p.quantity || 0) > 50) || !!p.flag_for_website;
-}
-
 function renderRefGrid() {
   const q = document.getElementById('refSearch').value.trim().toLowerCase();
   const grid = document.getElementById('refGrid');
-  const filtered = allProducts.filter(isEligibleForInstagram).filter(p =>
+  const filtered = allProducts.filter(p =>
     !q || (p.sku || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
   );
-  if (!filtered.length) { grid.innerHTML = '<div class="ref-empty">No eligible products (need &gt;50kg in stock, or "On Request" flag) match.</div>'; return; }
+  if (!filtered.length) { grid.innerHTML = '<div class="ref-empty">No products match.</div>'; return; }
   grid.innerHTML = filtered.map(p => {
     const imgs = JSON.parse(p.images || '[]');
     const thumb = imgs[0];
-    const isSel = selectedRef && selectedRef.id === p.id;
+    const isSel = selectedRefs.some(r => r.id === p.id);
     return `
-      <div class="ref-item ${isSel ? 'selected' : ''}" onclick="selectReference(${p.id})">
+      <div class="ref-item ${isSel ? 'selected' : ''}" onclick="toggleReference(${p.id})">
         <img src="/uploads/${esc(thumb)}" alt="${esc(p.name)}">
         <div class="cap"><span class="sku">${esc(p.sku)}</span><span class="name">${esc(p.name)}</span></div>
       </div>
@@ -320,26 +316,41 @@ function renderRefGrid() {
   }).join('');
 }
 
-function selectReference(productId) {
-  const p = allProducts.find(x => x.id === productId);
-  if (!p) return;
-  const imgs = JSON.parse(p.images || '[]');
-  const wasTemplateText = isUneditedTemplateText(document.getElementById('fPrompt').value);
-  selectedRef = { ...p, filename: imgs[0] };
-
+function renderSelectedRefsBar() {
   const bar = document.getElementById('refSelectedBar');
+  if (!selectedRefs.length) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  document.getElementById('refSelectedImg').src = '/uploads/' + selectedRef.filename;
-  document.getElementById('refSelectedLabel').textContent = `${p.sku} — ${p.name}`;
-  document.getElementById('refContext').innerHTML = buildContextHtml(p);
+  document.getElementById('refChips').innerHTML = selectedRefs.map(p => `
+    <span class="ref-chip">
+      <img src="/uploads/${esc(p.filename)}" alt="">
+      <span>${esc(p.sku)}</span>
+      <button type="button" onclick="toggleReference(${p.id})" title="Remove">&times;</button>
+    </span>
+  `).join('');
+  document.getElementById('refContext').innerHTML = selectedRefs.map(buildContextHtml).join('<hr>');
+}
+
+function toggleReference(productId) {
+  const wasTemplateText = isUneditedTemplateText(document.getElementById('fPrompt').value);
+  const idx = selectedRefs.findIndex(r => r.id === productId);
+  if (idx !== -1) {
+    selectedRefs.splice(idx, 1);
+  } else {
+    if (selectedRefs.length >= MAX_REFS) { toast(`You can reference up to ${MAX_REFS} products`, 'error'); return; }
+    const p = allProducts.find(x => x.id === productId);
+    if (!p) return;
+    const imgs = JSON.parse(p.images || '[]');
+    selectedRefs.push({ ...p, filename: imgs[0] });
+  }
+  renderSelectedRefsBar();
   if (wasTemplateText) document.getElementById('fPrompt').value = currentTemplatePrompt();
   renderRefGrid();
 }
 
 function clearReference() {
   const wasTemplateText = isUneditedTemplateText(document.getElementById('fPrompt').value);
-  selectedRef = null;
-  document.getElementById('refSelectedBar').style.display = 'none';
+  selectedRefs = [];
+  renderSelectedRefsBar();
   if (wasTemplateText) document.getElementById('fPrompt').value = currentTemplatePrompt();
   renderRefGrid();
 }
@@ -432,8 +443,8 @@ let currentMode = 'post';
 // Builds the right template for the current tab + whether a reference
 // product is currently selected.
 function currentTemplatePrompt() {
-  if (currentMode === 'post') return selectedRef ? postTemplateWithRef() : postTemplateGeneral();
-  return selectedRef ? carouselTemplateWithRef() : carouselTemplateGeneral();
+  if (currentMode === 'post') return selectedRefs.length ? postTemplateWithRef() : postTemplateGeneral();
+  return selectedRefs.length ? carouselTemplateWithRef() : carouselTemplateGeneral();
 }
 
 // Only auto-refresh the prompt box when it still holds one of the
@@ -476,8 +487,8 @@ async function generateImage() {
 
   if (!model || !basePrompt) { toast('Model and prompt are both required', 'error'); return; }
 
-  const contextPrefix = selectedRef ? buildProductContextText(selectedRef) + '\n\n' : '';
-  const referenceImage = selectedRef ? selectedRef.filename : undefined;
+  const contextPrefix = selectedRefs.length ? selectedRefs.map(buildProductContextText).join('\n\n') + '\n\n' : '';
+  const referenceImages = selectedRefs.length ? selectedRefs.map(r => r.filename) : undefined;
 
   btn.disabled = true; btn.textContent = 'Generating…';
   panel.innerHTML = '<div class="spinner"></div>';
@@ -486,16 +497,16 @@ async function generateImage() {
   try {
     if (currentMode === 'post') {
       const slidePrompt = contextPrefix + basePrompt;
-      const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImage });
+      const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImages });
       currentSet = [{ url: result.url, prompt: slidePrompt, label: null, size: result.size }];
     } else {
       const n = parseInt(document.getElementById('fSlideCount').value, 10);
-      const slideFocusList = selectedRef ? SLIDE_FOCUS_REF : SLIDE_FOCUS_GENERAL;
+      const slideFocusList = selectedRefs.length ? SLIDE_FOCUS_REF : SLIDE_FOCUS_GENERAL;
       for (let i = 0; i < n; i++) {
         panel.innerHTML = `<div class="spinner"></div><div style="margin-top:10px;font-size:12.5px;color:var(--muted)">Generating slide ${i+1} of ${n}…</div>`;
         const focus = slideFocusList[i % slideFocusList.length];
         const slidePrompt = contextPrefix + basePrompt + `\n\nSlide ${i+1} of ${n} focus: ${focus}`;
-        const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImage });
+        const result = await callGenerate({ model, prompt: slidePrompt, size, region, watermark, referenceImages });
         currentSet.push({ url: result.url, prompt: slidePrompt, label: `Slide ${i+1} of ${n}`, size: result.size });
       }
     }
@@ -609,7 +620,7 @@ async function generateCaption() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt: currentSet[0].prompt,
-        productContext: selectedRef ? buildProductContextText(selectedRef) : undefined,
+        productContext: selectedRefs.length ? selectedRefs.map(buildProductContextText).join('\n\n') : undefined,
       }),
     });
     const data = await res.json();
@@ -624,7 +635,7 @@ async function generateCaption() {
 }
 
 // ── LinkedIn tab ─────────────────────────────────────────────
-let liSelectedRef = null;
+let liSelectedRefs = [];
 
 function renderLiRefGrid() {
   const searchEl = document.getElementById('liRefSearch');
@@ -638,9 +649,9 @@ function renderLiRefGrid() {
   grid.innerHTML = filtered.map(p => {
     const imgs = JSON.parse(p.images || '[]');
     const thumb = imgs[0];
-    const isSel = liSelectedRef && liSelectedRef.id === p.id;
+    const isSel = liSelectedRefs.some(r => r.id === p.id);
     return `
-      <div class="ref-item ${isSel ? 'selected' : ''}" onclick="selectLiReference(${p.id})">
+      <div class="ref-item ${isSel ? 'selected' : ''}" onclick="toggleLiReference(${p.id})">
         <img src="/uploads/${esc(thumb)}" alt="${esc(p.name)}">
         <div class="cap"><span class="sku">${esc(p.sku)}</span><span class="name">${esc(p.name)}</span></div>
       </div>
@@ -648,23 +659,38 @@ function renderLiRefGrid() {
   }).join('');
 }
 
-function selectLiReference(productId) {
-  const p = allProducts.find(x => x.id === productId);
-  if (!p) return;
-  const imgs = JSON.parse(p.images || '[]');
-  liSelectedRef = { ...p, filename: imgs[0] };
-
+function renderLiSelectedRefsBar() {
   const bar = document.getElementById('liRefSelectedBar');
+  if (!liSelectedRefs.length) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  document.getElementById('liRefSelectedImg').src = '/uploads/' + liSelectedRef.filename;
-  document.getElementById('liRefSelectedLabel').textContent = `${p.sku} — ${p.name}`;
-  document.getElementById('liRefContext').innerHTML = buildContextHtml(p);
+  document.getElementById('liRefChips').innerHTML = liSelectedRefs.map(p => `
+    <span class="ref-chip">
+      <img src="/uploads/${esc(p.filename)}" alt="">
+      <span>${esc(p.sku)}</span>
+      <button type="button" onclick="toggleLiReference(${p.id})" title="Remove">&times;</button>
+    </span>
+  `).join('');
+  document.getElementById('liRefContext').innerHTML = liSelectedRefs.map(buildContextHtml).join('<hr>');
+}
+
+function toggleLiReference(productId) {
+  const idx = liSelectedRefs.findIndex(r => r.id === productId);
+  if (idx !== -1) {
+    liSelectedRefs.splice(idx, 1);
+  } else {
+    if (liSelectedRefs.length >= MAX_REFS) { toast(`You can reference up to ${MAX_REFS} products`, 'error'); return; }
+    const p = allProducts.find(x => x.id === productId);
+    if (!p) return;
+    const imgs = JSON.parse(p.images || '[]');
+    liSelectedRefs.push({ ...p, filename: imgs[0] });
+  }
+  renderLiSelectedRefsBar();
   renderLiRefGrid();
 }
 
 function clearLiReference() {
-  liSelectedRef = null;
-  document.getElementById('liRefSelectedBar').style.display = 'none';
+  liSelectedRefs = [];
+  renderLiSelectedRefsBar();
   renderLiRefGrid();
 }
 
@@ -678,7 +704,7 @@ async function generateLinkedInPost() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         topic,
-        productContext: liSelectedRef ? buildProductContextText(liSelectedRef) : undefined,
+        productContext: liSelectedRefs.length ? liSelectedRefs.map(buildProductContextText).join('\n\n') : undefined,
       }),
     });
     const data = await res.json();

@@ -274,7 +274,7 @@ app.post('/api/byteplus/generate-image', async (req, res) => {
   try {
     const key = process.env.BYTEPLUS_API_KEY;
     if (!key) return res.status(400).json({ error: 'BYTEPLUS_API_KEY not set in .env' });
-    const { model, size, watermark, response_format, region, referenceImage, imageUrl } = req.body;
+    const { model, size, watermark, response_format, region, referenceImages, imageUrl } = req.body;
     let { prompt } = req.body;
     if (!model || !prompt) return res.status(400).json({ error: 'model and prompt are required' });
 
@@ -293,7 +293,8 @@ app.post('/api/byteplus/generate-image', async (req, res) => {
         refs.push(`data:image/jpeg;base64,${fs.readFileSync(LOGO_PATH).toString('base64')}`);
         noteLines.push(`Reference image ${refs.length} is the exact Arambhika Enablers logo (wordmark + bolt icon) — reproduce it exactly as shown, do not redraw, restyle, or approximate it.`);
       }
-      if (referenceImage) {
+      const refImageList = Array.isArray(referenceImages) ? referenceImages : (referenceImages ? [referenceImages] : []);
+      for (const referenceImage of refImageList) {
         const safeName = path.basename(referenceImage);
         const filePath = path.join(uploadsDir, safeName);
         if (!fs.existsSync(filePath)) return res.status(400).json({ error: `Reference image ${safeName} not found` });
@@ -301,7 +302,7 @@ app.post('/api/byteplus/generate-image', async (req, res) => {
         const mime = BYTEPLUS_MIME[ext];
         if (!mime) return res.status(400).json({ error: `Unsupported reference image format: ${ext}` });
         refs.push(`data:${mime};base64,${fs.readFileSync(filePath).toString('base64')}`);
-        noteLines.push(`Reference image ${refs.length} is the exact product photo — keep it accurate and unaltered.`);
+        noteLines.push(`Reference image ${refs.length} is an exact product photo — keep it accurate and unaltered.`);
       }
       if (refs.length) {
         image = refs.length === 1 ? refs[0] : refs;
