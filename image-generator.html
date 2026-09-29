@@ -272,6 +272,7 @@ async function loadProductsForRef() {
     const res = await fetch('/api/products');
     const body = await res.json();
     allProducts = (body.data || []).filter(p => {
+      if (!p.flag_reference_image) return false;
       try { return JSON.parse(p.images || '[]').length > 0; } catch (e) { return false; }
     });
   } catch (e) { allProducts = []; }

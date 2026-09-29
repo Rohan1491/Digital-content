@@ -225,6 +225,13 @@
               <span id="fAvailReadout" style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px"></span>
             </div>
           </div>
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="fReferenceImage" style="width:auto" />
+              Reference image
+            </label>
+            <span style="font-size:12px;color:var(--muted)">When checked, this product's photo appears as a reference option in the Content Generator.</span>
+          </div>
         </div>
       </div>
 
@@ -354,6 +361,7 @@ function productRowHtml(p) {
     ? `<span class="${availClass[avail]||'avail-yes'}" style="font-size:12px;font-weight:500">${availLabel[avail]||avail}</span>`
     : `<span class="${fa?'avail-yes':'avail-no'}" style="font-size:12px;font-weight:500">${fa?'In Stock':'Out of Stock'}</span>`;
   const unitSuffix = p.unit==='KG'?'/kg':p.unit==='Piece'?'/pc':'/'+(p.unit||'').toLowerCase();
+  const hasImg = imgs.length > 0;
   return `
     <tr>
       <td class="thumb" onclick='openEditModal(${JSON.stringify(p).replace(/'/g,"&#39;")})'>${thumb}</td>
@@ -374,6 +382,11 @@ function productRowHtml(p) {
           <option value="on_request" ${fw?'selected':''}>On Request</option>
           <option value="in_inventory" ${!fw?'selected':''}>In Inventory</option>
         </select>
+      </td>
+      <td onclick="event.stopPropagation()">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:${hasImg?'inherit':'var(--muted)'}" title="${hasImg?'':'Add a photo first'}">
+          <input type="checkbox" style="width:auto" ${!!p.flag_reference_image?'checked':''} ${hasImg?'':'disabled'} onchange="setReferenceFlag(${p.id},this.checked)">
+        </label>
       </td>
     </tr>`;
 }
@@ -407,7 +420,7 @@ function renderGrid(list) {
     html += `<span class="cat-name">${cat}</span>`;
     html += `<span class="cat-count">${items.length} product${items.length===1?'':'s'}</span>`;
     html += `<span class="cat-chevron">&#9660;</span></div>`;
-    html += `<div class="cat-body"><table><thead><tr><th></th><th>SKU</th><th>Name</th><th>Price</th><th>MOQ</th><th>Availability</th><th>Flags</th></tr></thead><tbody>`;
+    html += `<div class="cat-body"><table><thead><tr><th></th><th>SKU</th><th>Name</th><th>Price</th><th>MOQ</th><th>Availability</th><th>Flags</th><th>Reference</th></tr></thead><tbody>`;
     html += items.map(productRowHtml).join('');
     html += `</tbody></table></div></div>`;
   }
@@ -451,6 +464,7 @@ function fillForm(p) {
   document.getElementById('fDetails').value = p?.details || '';
   document.getElementById('fApplications').value = p?.applications || '';
   document.getElementById('fInvMode').value = p?.flag_for_website ? 'on_request' : 'in_inventory';
+  document.getElementById('fReferenceImage').checked = !!p?.flag_reference_image;
   window._editingAvailFlag = !!p?.flag_available;
   updateAvailReadout();
 
@@ -578,6 +592,7 @@ function buildPayload() {
     details: document.getElementById('fDetails').value.trim(),
     applications: document.getElementById('fApplications').value.trim(),
     flag_for_website: document.getElementById('fInvMode').value === 'on_request' ? 1 : 0,
+    flag_reference_image: document.getElementById('fReferenceImage').checked ? 1 : 0,
     specs: {
       type: document.getElementById('sType').value.trim(),
       form_factor: document.getElementById('sFormFactor').value.trim(),
@@ -666,6 +681,20 @@ async function setInventoryMode(productId, value) {
     // Switching mode also changes the server-computed In Stock/Out of Stock
     // badge, so reload rather than patch local state.
     await loadProducts();
+  } catch(e) { toast('Save failed', 'error'); }
+}
+
+async function setReferenceFlag(productId, checked) {
+  const p = allProducts.find(x => x.id === productId);
+  try {
+    const res = await fetch(`/api/products/${productId}/flags`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ flag_reference_image: checked ? 1 : 0 })
+    });
+    if (!res.ok) throw new Error('Save failed');
+    if (p) p.flag_reference_image = checked ? 1 : 0;
+    toast('Saved');
   } catch(e) { toast('Save failed', 'error'); }
 }
 

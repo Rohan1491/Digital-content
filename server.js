@@ -39,6 +39,9 @@ db.exec(`
     updated_at TEXT DEFAULT (datetime('now'))
   );
 `);
+// Added after the table above was already live in the shared CRM db, so it
+// needs its own migration rather than just living in the CREATE TABLE.
+try { db.exec("ALTER TABLE products ADD COLUMN flag_reference_image INTEGER DEFAULT 0"); } catch (e) {}
 
 app.use(compression());
 app.use(express.json({ limit: '15mb' }));
@@ -107,25 +110,29 @@ app.post('/api/products', (req, res) => {
   // (client confirmation workflow) -- default flag_for_website to 1 unless the
   // caller says otherwise.
   const flagForWebsite = p.flag_for_website === undefined ? 1 : (p.flag_for_website ? 1 : 0);
-  const r = db.prepare(`INSERT INTO products (sku,category,name,price,new_price,availability,unit,min_quantity,dimensions,details,specs,applications,images,flag_for_website) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(p.sku, p.category, p.name, p.price, p.new_price || '', p.availability || 'yes', p.unit, p.min_quantity || 1, p.dimensions || '', p.details || '', JSON.stringify(p.specs || {}), p.applications || '', '[]', flagForWebsite);
+  const r = db.prepare(`INSERT INTO products (sku,category,name,price,new_price,availability,unit,min_quantity,dimensions,details,specs,applications,images,flag_for_website,flag_reference_image) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(p.sku, p.category, p.name, p.price, p.new_price || '', p.availability || 'yes', p.unit, p.min_quantity || 1, p.dimensions || '', p.details || '', JSON.stringify(p.specs || {}), p.applications || '', '[]', flagForWebsite, p.flag_reference_image ? 1 : 0);
   syncAvailabilityFlags(r.lastInsertRowid);
   res.json({ success: true, id: r.lastInsertRowid });
 });
 
 app.put('/api/products/:id', (req, res) => {
   const p = req.body;
-  db.prepare(`UPDATE products SET sku=?,category=?,name=?,price=?,new_price=?,availability=?,unit=?,min_quantity=?,dimensions=?,details=?,specs=?,applications=?,flag_for_website=?,updated_at=datetime('now') WHERE id=?`)
-    .run(p.sku, p.category, p.name, p.price, p.new_price || '', p.availability, p.unit, p.min_quantity, p.dimensions || '', p.details || '', JSON.stringify(p.specs || {}), p.applications || '', p.flag_for_website ? 1 : 0, req.params.id);
+  db.prepare(`UPDATE products SET sku=?,category=?,name=?,price=?,new_price=?,availability=?,unit=?,min_quantity=?,dimensions=?,details=?,specs=?,applications=?,flag_for_website=?,flag_reference_image=?,updated_at=datetime('now') WHERE id=?`)
+    .run(p.sku, p.category, p.name, p.price, p.new_price || '', p.availability, p.unit, p.min_quantity, p.dimensions || '', p.details || '', JSON.stringify(p.specs || {}), p.applications || '', p.flag_for_website ? 1 : 0, p.flag_reference_image ? 1 : 0, req.params.id);
   syncAvailabilityFlags(req.params.id);
   res.json({ success: true });
 });
 
 app.patch('/api/products/:id/flags', (req, res) => {
-  const { flag_for_website } = req.body;
-  db.prepare(`UPDATE products SET flag_for_website=?, updated_at=datetime('now') WHERE id=?`)
-    .run(flag_for_website ? 1 : 0, req.params.id);
-  syncAvailabilityFlags(req.params.id);
+  const { flag_for_website, flag_reference_image } = req.body;
+  const updates = [], params = [];
+  if (flag_for_website !== undefined) { updates.push('flag_for_website=?'); params.push(flag_for_website ? 1 : 0); }
+  if (flag_reference_image !== undefined) { updates.push('flag_reference_image=?'); params.push(flag_reference_image ? 1 : 0); }
+  if (!updates.length) return res.status(400).json({ error: 'No flags provided' });
+  params.push(req.params.id);
+  db.prepare(`UPDATE products SET ${updates.join(', ')}, updated_at=datetime('now') WHERE id=?`).run(...params);
+  if (flag_for_website !== undefined) syncAvailabilityFlags(req.params.id);
   res.json({ success: true });
 });
 
