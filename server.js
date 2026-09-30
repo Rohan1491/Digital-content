@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const compression = require('compression');
-const { uploadImageBuffer } = require('./lib/drive');
+const { uploadImageBuffer, listFiles } = require('./lib/drive');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -583,6 +583,12 @@ app.get('/api/google/status', (req, res) => {
     connected: !!process.env.GOOGLE_REFRESH_TOKEN,
     configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REDIRECT_URI),
   });
+});
+
+app.get('/api/google/drive-files', async (req, res) => {
+  try {
+    res.json({ files: await listFiles() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
