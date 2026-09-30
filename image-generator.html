@@ -190,6 +190,14 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
           </div>
           <input type="text" id="refSearch" class="ref-search" placeholder="Search by SKU or name..." oninput="renderRefGrid()">
           <div class="ref-grid" id="refGrid"></div>
+          <div class="checkbox-row" style="margin-top:12px;margin-bottom:0">
+            <input type="checkbox" id="fIncludePrice">
+            <label for="fIncludePrice" style="margin:0;text-transform:none;font-weight:400;color:var(--text)">Include price in prompt</label>
+          </div>
+          <div class="field" style="margin-top:8px;margin-bottom:0">
+            <label>Additional context</label>
+            <textarea id="fExtraContext" placeholder="e.g. 20% off this week, festive sale, limited stock..." rows="2"></textarea>
+          </div>
         </div>
       </div>
 
@@ -242,6 +250,14 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
           </div>
           <input type="text" id="liRefSearch" class="ref-search" placeholder="Search by SKU or name..." oninput="renderLiRefGrid()">
           <div class="ref-grid" id="liRefGrid"></div>
+          <div class="checkbox-row" style="margin-top:12px;margin-bottom:0">
+            <input type="checkbox" id="liIncludePrice">
+            <label for="liIncludePrice" style="margin:0;text-transform:none;font-weight:400;color:var(--text)">Include price in prompt</label>
+          </div>
+          <div class="field" style="margin-top:8px;margin-bottom:0">
+            <label>Additional context</label>
+            <textarea id="liExtraContext" placeholder="e.g. 20% off this week, festive sale, limited stock..." rows="2"></textarea>
+          </div>
         </div>
       </div>
 
@@ -369,16 +385,9 @@ function buildContextHtml(p) {
   return parts.join('<br>');
 }
 
-function buildProductContextText(p) {
-  const priceLine = p.price ? `Price: Rs.${p.price}${p.new_price ? ' (offer: Rs.'+p.new_price+')' : ''}/${p.unit||'unit'}, MOQ ${p.min_quantity||1}${p.unit||''}.` : '';
-  return [
-    `Real product being referenced: ${p.name} (SKU ${p.sku}, category ${p.category||''}).`,
-    p.dimensions ? `Dimensions: ${p.dimensions}.` : '',
-    priceLine,
-    p.details ? `Details: ${p.details}` : '',
-    p.applications ? `Applications: ${p.applications}.` : '',
-    'Use these real facts for any spec text, price, or dimensions shown in the image — do not invent different numbers.',
-  ].filter(Boolean).join(' ');
+function buildProductContextText(p, includePrice) {
+  const priceLine = includePrice && p.price ? ` Price: Rs.${p.price}${p.new_price ? ' (offer: Rs.'+p.new_price+')' : ''}/${p.unit||'unit'}, MOQ ${p.min_quantity||1}${p.unit||''}.` : '';
+  return `Real product being referenced: ${p.name} (category ${p.category||''}).${priceLine} Use these real facts for any spec text, price, or dimensions shown in the image — do not invent different numbers.`;
 }
 
 // ── Templates ────────────────────────────────────────────────
@@ -393,7 +402,7 @@ function postTemplateWithRef() {
 
 Reference target: the attached product photo. Reproduce it exactly as shot — do not alter, restyle, relight, crop the object, or invent details. Preserve the true material finish (metallic sheen, plating tone, surface texture), exact proportions, edge profile, hole pattern, and thickness. No added reflections, no fictional variants, no extra units. Cut it out cleanly from its original background with a soft, natural contact shadow.
 
-Generated scene: flat white background, with a very subtle technical grid or fine diagonal facet pattern at low opacity in a barely-there light grey, and a faint oversized brand mark watermarked behind the composition. Place the product slightly off-center with generous breathing room on all sides. In the top-left corner, add the "Arambhika" wordmark logo, small and clean, exactly as shown in the logo reference (black lettering with the electric-blue lightning-bolt accent). Add a headline reading "[PRODUCT NAME]" in heavy condensed sans-serif, all caps, black, tight letter spacing, positioned at the top near the logo. Near the product, connected by a thin leader line, add a compact rounded spec-callout badge in the same electric blue as the logo's lightning bolt, with white text reading "[DIMENSIONS]" · "[PLATING/MATERIAL]" · "₹[PRICE]/KG". At the bottom, centered, add an accent bar in that same electric blue with white text reading "WhatsApp +91-9315545821 · arambhika.com".
+Generated scene: flat white background, with a very subtle technical grid or fine diagonal facet pattern at low opacity in a barely-there light grey, and a faint oversized brand mark watermarked behind the composition. Place the product slightly off-center with generous breathing room on all sides. In the top-left corner, add the "Arambhika" wordmark logo, small and clean, exactly as shown in the logo reference (black lettering with the electric-blue lightning-bolt accent). Add a headline reading "[PRODUCT NAME]" in heavy condensed sans-serif, all caps, black, tight letter spacing, positioned at the top near the logo. Near the product, connected by a thin leader line, add a compact rounded spec-callout badge in the same electric blue as the logo's lightning bolt, with white text reading "[DIMENSIONS]" · "[PLATING/MATERIAL]" · "₹[PRICE]/KG". At the bottom, centered, add an accent bar in that same electric blue with white text reading "WhatsApp +91-9315545821 · www.arambhika.com".
 
 Style: crisp photo-and-vector hybrid, high contrast, white and electric-blue palette matching the logo — black used only for text and the logo wordmark, no other accent colors, no charcoal or grey tones — sharp legible text rendering, generous negative space, no stock-photo people, no emoji, no decorative clutter.`;
 }
@@ -403,7 +412,7 @@ function postTemplateGeneral() {
 
 Scene: a clean technical product photograph of nickel strips and tin-coated copper busbars arranged in an organized industrial composition — coiled and cut nickel strip with a soft metallic sheen, alongside copper busbars, on a clean white studio surface with subtle top-down lighting and a soft natural contact shadow so the metal reads clearly against the white. No people, no clutter, no battery cells unless the image is specifically about pack assembly.
 
-Brand treatment: in the top-left corner, add the "Arambhika" wordmark logo, small and clean, exactly as shown in the logo reference (black lettering with the electric-blue lightning-bolt accent). Add a bold condensed sans-serif all-caps headline reading "[HEADLINE]" in black with tight letter spacing. At the bottom, centered, add an accent bar in the same electric blue as the logo's lightning bolt, with white text reading "WhatsApp +91-9315545821 · arambhika.com".
+Brand treatment: in the top-left corner, add the "Arambhika" wordmark logo, small and clean, exactly as shown in the logo reference (black lettering with the electric-blue lightning-bolt accent). Add a bold condensed sans-serif all-caps headline reading "[HEADLINE]" in black with tight letter spacing. At the bottom, centered, add an accent bar in the same electric blue as the logo's lightning bolt, with white text reading "WhatsApp +91-9315545821 · www.arambhika.com".
 
 Style: crisp industrial product photography, high contrast, white and electric-blue palette matching the logo — black used only for text and the logo wordmark, no other accent colors, no charcoal or grey tones — sharp legible text rendering, generous negative space, no stock-photo people, no emoji, no decorative clutter.`;
 }
@@ -427,14 +436,14 @@ Apply the same clean white-and-electric-blue brand treatment on every slide for 
 const SLIDE_FOCUS_REF = [
   'Hero shot — product centered with breathing room, bold headline with the product name, and a small spec callout badge (dimensions/price/MOQ) near the product.',
   'Spec close-up — zoom on a key dimension or plating detail with clean measurement line annotations, same brand treatment, minimal text.',
-  'Application context — the product shown in the context of an EV/ESS battery pack assembly, with the CTA line "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  arambhika.com" at the bottom.',
+  'Application context — the product shown in the context of an EV/ESS battery pack assembly, with the CTA line "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  www.arambhika.com" at the bottom.',
   'Comparison view — a size or variant comparison relevant to this product line, same visual system, brief callout text.',
 ];
 
 const SLIDE_FOCUS_GENERAL = [
   'Hero shot — nickel strips and copper busbars arranged in a bold hero composition, with a strong brand headline.',
   'Manufacturing strength — a shot suggesting in-house plating and manufacturing capability (coils, precision tooling, clean production floor), same brand treatment, minimal text.',
-  'Application context — the components shown in the context of an EV/ESS battery pack assembly, with the CTA line "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  arambhika.com" at the bottom.',
+  'Application context — the components shown in the context of an EV/ESS battery pack assembly, with the CTA line "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  www.arambhika.com" at the bottom.',
   'Range overview — a spread suggesting the breadth of sizes and types available (plated vs pure nickel strip, busbar variants), same visual system, brief callout text.',
 ];
 
@@ -486,7 +495,10 @@ async function generateImage() {
 
   if (!model || !basePrompt) { toast('Model and prompt are both required', 'error'); return; }
 
-  const contextPrefix = selectedRefs.length ? selectedRefs.map(buildProductContextText).join('\n\n') + '\n\n' : '';
+  const includePrice = document.getElementById('fIncludePrice').checked;
+  const extraContext = document.getElementById('fExtraContext').value.trim();
+  const productContext = selectedRefs.length ? selectedRefs.map(p => buildProductContextText(p, includePrice)).join('\n\n') : '';
+  const contextPrefix = [productContext, extraContext ? `Additional context: ${extraContext}` : ''].filter(Boolean).join('\n\n') + (productContext || extraContext ? '\n\n' : '');
   const referenceImages = selectedRefs.length ? selectedRefs.map(r => r.filename) : undefined;
 
   btn.disabled = true; btn.textContent = 'Generating…';
@@ -618,11 +630,17 @@ async function generateCaption() {
   const btn = document.getElementById('genCaptionBtn');
   btn.disabled = true; btn.textContent = 'Generating…';
   try {
+    const includePrice = document.getElementById('fIncludePrice').checked;
+    const extraContext = document.getElementById('fExtraContext').value.trim();
+    const productContext = [
+      selectedRefs.length ? selectedRefs.map(p => buildProductContextText(p, includePrice)).join('\n\n') : '',
+      extraContext ? `Additional context: ${extraContext}` : '',
+    ].filter(Boolean).join('\n\n') || undefined;
     const res = await fetch('/api/anthropic/generate-caption', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt: currentSet[0].prompt,
-        productContext: selectedRefs.length ? selectedRefs.map(buildProductContextText).join('\n\n') : undefined,
+        productContext,
       }),
     });
     const data = await res.json();
@@ -702,11 +720,17 @@ async function generateLinkedInPost() {
   const btn = document.getElementById('liGenBtn');
   btn.disabled = true; btn.textContent = 'Generating…';
   try {
+    const liIncludePrice = document.getElementById('liIncludePrice').checked;
+    const liExtraContext = document.getElementById('liExtraContext').value.trim();
+    const productContext = [
+      liSelectedRefs.length ? liSelectedRefs.map(p => buildProductContextText(p, liIncludePrice)).join('\n\n') : '',
+      liExtraContext ? `Additional context: ${liExtraContext}` : '',
+    ].filter(Boolean).join('\n\n') || undefined;
     const res = await fetch('/api/anthropic/generate-linkedin-post', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         topic,
-        productContext: liSelectedRefs.length ? liSelectedRefs.map(buildProductContextText).join('\n\n') : undefined,
+        productContext,
       }),
     });
     const data = await res.json();

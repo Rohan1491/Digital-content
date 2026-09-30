@@ -7,7 +7,6 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const compression = require('compression');
-const sharp = require('sharp');
 const { uploadImageBuffer } = require('./lib/drive');
 
 const app = express();
@@ -271,22 +270,6 @@ const BYTEPLUS_MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'im
 // app) so the path still resolves once this is deployed.
 const LOGO_PATH = path.join(__dirname, 'assets', 'arambhika-logo.jpeg');
 
-// Stamps the real logo file onto a generated image as a fixed corner
-// watermark — this is guaranteed pixel-perfect since it's the actual logo
-// asset, unlike asking the model to draw the logo into its composition.
-async function watermarkImage(buffer) {
-  const base = sharp(buffer);
-  const meta = await base.metadata();
-  const logoBuffer = await sharp(LOGO_PATH).resize({ width: Math.round(meta.width * 0.16) }).toBuffer();
-  const logoMeta = await sharp(logoBuffer).metadata();
-  const margin = Math.round(meta.width * 0.03);
-  return base.composite([{
-    input: logoBuffer,
-    left: meta.width - logoMeta.width - margin,
-    top: meta.height - logoMeta.height - margin,
-  }]).jpeg({ quality: 92 }).toBuffer();
-}
-
 app.post('/api/byteplus/generate-image', async (req, res) => {
   try {
     const key = process.env.BYTEPLUS_API_KEY;
@@ -343,13 +326,13 @@ app.post('/api/byteplus/generate-image', async (req, res) => {
     const j = await r.json();
     if (!r.ok || j.error) return res.status(r.status || 500).json({ error: j.error?.message || j.error || 'BytePlus request failed' });
 
-    // Stamp our logo onto every generated image and save a durable local +
-    // Drive copy — BytePlus's own result URLs are only valid 24h. rawUrl
-    // keeps the clean, unwatermarked BytePlus output so "regenerate with
-    // feedback" edits build on that instead of an image with our watermark
-    // already baked in. Never let a watermark/Drive hiccup fail the
-    // generation the user is waiting on — fall back to the raw BytePlus url
-    // and log it.
+    // Save a durable local + Drive copy of every generated image — BytePlus's
+    // own result URLs are only valid 24h. No compositing here: the only
+    // logo in the image is the one the model draws in per the prompt
+    // (top-left) — we no longer stamp a second one on top. rawUrl and url
+    // end up identical here, but rawUrl is kept so "regenerate with
+    // feedback" always has an explicit source to edit from. Never let a
+    // save/Drive hiccup fail the generation the user is waiting on.
     if (Array.isArray(j.data)) {
       const publicBase = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
       await Promise.all(j.data.map(async (item, i) => {
@@ -359,18 +342,19 @@ app.post('/api/byteplus/generate-image', async (req, res) => {
           const sourceRes = await fetch(item.url);
           if (!sourceRes.ok) throw new Error(`Failed to download generated image (${sourceRes.status})`);
           const sourceBuffer = Buffer.from(await sourceRes.arrayBuffer());
-          const watermarked = await watermarkImage(sourceBuffer);
-          const filename = `generated-${Date.now()}-${i}.jpg`;
-          fs.writeFileSync(path.join(uploadsDir, filename), watermarked);
+          const contentType = sourceRes.headers.get('content-type') || 'image/jpeg';
+          const ext = contentType.includes('png') ? 'png' : 'jpg';
+          const filename = `generated-${Date.now()}-${i}.${ext}`;
+          fs.writeFileSync(path.join(uploadsDir, filename), sourceBuffer);
           item.url = `${publicBase}/uploads/${filename}`;
           try {
-            const drive = await uploadImageBuffer(watermarked, filename, 'image/jpeg');
+            const drive = await uploadImageBuffer(sourceBuffer, filename, contentType);
             if (drive) item.driveLink = drive.link;
           } catch (e) {
             console.error('Drive upload failed:', e.message);
           }
         } catch (e) {
-          console.error('Watermarking failed, using unwatermarked BytePlus url:', e.message);
+          console.error('Saving local/Drive copy failed, using raw BytePlus url:', e.message);
         }
       }));
     }
@@ -390,7 +374,7 @@ app.post('/api/anthropic/generate-caption', async (req, res) => {
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 300,
-      system: 'You write Instagram captions for Arambhika Enablers, a B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV/ESS battery pack makers in India. Write one caption: 2-4 short sentences, confident and technical (not gimmicky), end with a CTA line using these real contact details verbatim: "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  arambhika.com", then 4-6 relevant hashtags on a new line. Do not invent specific numbers, percentages, certifications, or customer names/counts that were not given to you — if no product facts are supplied, keep any technical claims general and qualitative instead of fabricating specifics; the WhatsApp number and website above are the only contact details you should use, and always use them exactly as given. Return ONLY the caption text, no preamble, no quotes, no markdown.',
+      system: 'You write Instagram captions for Arambhika Enablers, a B2B manufacturer of nickel strips, copper busbars, and battery connectors for EV/ESS battery pack makers in India. Write one caption: 2-4 short sentences, confident and technical (not gimmicky), end with a CTA line using these real contact details verbatim: "WhatsApp +91-9315545821 for Bulk Quote — 2hr response  ·  www.arambhika.com", then 4-6 relevant hashtags on a new line. Do not invent specific numbers, percentages, certifications, or customer names/counts that were not given to you — if no product facts are supplied, keep any technical claims general and qualitative instead of fabricating specifics; the WhatsApp number and website above are the only contact details you should use, and always use them exactly as given. Return ONLY the caption text, no preamble, no quotes, no markdown.',
       messages: [{
         role: 'user',
         content: `Write an Instagram caption for this image.\n\nImage brief: ${prompt}${productContext ? `\n\nProduct facts to reference accurately (do not invent numbers): ${productContext}` : ''}`,
