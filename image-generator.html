@@ -59,20 +59,6 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
 .drive-status { font-size:11.5px; text-decoration:none; }
 .drive-status.drive-ok { color:#16a34a; font-weight:600; }
 .drive-status.drive-pending { color:var(--muted); }
-
-.drive-modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:100; align-items:center; justify-content:center; padding:24px; }
-.drive-modal-overlay.open { display:flex; }
-.drive-modal { background:var(--surface); border-radius:12px; width:100%; max-width:880px; max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
-.drive-modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
-.drive-modal-header h3 { font-size:15px; margin:0; }
-.drive-modal-body { padding:20px; overflow-y:auto; }
-.drive-file-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; }
-.drive-file-item { display:block; border:1px solid var(--border); border-radius:8px; overflow:hidden; text-decoration:none; color:inherit; background:var(--surface); transition:border-color .15s; }
-.drive-file-item:hover { border-color:#6366f1; }
-.drive-file-item img { width:100%; height:110px; object-fit:cover; display:block; background:#f1f5f9; }
-.drive-file-item .cap { padding:8px 10px; }
-.drive-file-item .cap .name { display:block; font-size:11.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.drive-file-item .cap .meta { display:block; font-size:10.5px; color:var(--muted); margin-top:2px; }
 .result-actions { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
 .feedback-row { display:flex; gap:6px; border-top:1px solid var(--border); padding-top:10px; }
 .feedback-row input { flex:1; font-size:12.5px; padding:7px 9px; }
@@ -198,16 +184,6 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
         <div class="li-status" id="driveStatus" style="margin-top:10px">Checking Google Drive connection…</div>
       </div>
 
-      <div class="drive-modal-overlay" id="driveModalOverlay" onclick="if(event.target===this) closeDriveModal()">
-        <div class="drive-modal">
-          <div class="drive-modal-header">
-            <h3>Google Drive folder</h3>
-            <button type="button" class="btn btn-sm" onclick="closeDriveModal()">Close</button>
-          </div>
-          <div class="drive-modal-body" id="driveModalBody"></div>
-        </div>
-      </div>
-
       <div class="card">
         <h3 class="section-title">2 · Reference Products</h3>
         <div class="ref-section" style="margin-top:0">
@@ -250,6 +226,12 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
         <div class="gallery" id="galleryWrap" style="display:none">
           <h3>This session</h3>
           <div class="gallery-grid" id="galleryGrid"></div>
+        </div>
+
+        <div class="gallery" id="driveFilesPanel" style="display:none">
+          <h3>Drive folder</h3>
+          <div class="hint" style="margin:-6px 0 10px">Click an image to load it into Generated Image above, ready to publish.</div>
+          <div class="gallery-grid" id="driveFilesGrid"></div>
         </div>
       </div>
     </div>
@@ -808,7 +790,7 @@ async function checkGoogleDriveStatus() {
     const res = await fetch('/api/google/status');
     const data = await res.json();
     if (data.connected) {
-      el.innerHTML = '<span class="dot on"></span> Google Drive connected — generated images are saved automatically — <a class="btn btn-sm" href="javascript:void(0)" onclick="openDriveModal()">View Drive folder</a>';
+      el.innerHTML = '<span class="dot on"></span> Google Drive connected — generated images are saved automatically — <a class="btn btn-sm" href="javascript:void(0)" onclick="toggleDriveFiles()" id="driveToggleLink">View Drive folder</a>';
     } else if (data.configured) {
       el.innerHTML = '<span class="dot"></span> Google Drive not connected — <a class="btn btn-sm" href="/auth/google" target="_blank" rel="noopener">Connect Google Drive</a>';
     } else {
@@ -819,33 +801,47 @@ async function checkGoogleDriveStatus() {
   }
 }
 
-async function openDriveModal() {
-  const overlay = document.getElementById('driveModalOverlay');
-  const body = document.getElementById('driveModalBody');
-  overlay.classList.add('open');
-  body.innerHTML = '<div class="spinner"></div>';
+async function toggleDriveFiles() {
+  const panel = document.getElementById('driveFilesPanel');
+  const link = document.getElementById('driveToggleLink');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+    if (link) link.textContent = 'View Drive folder';
+    return;
+  }
+  panel.style.display = 'block';
+  if (link) link.textContent = 'Hide Drive folder';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const grid = document.getElementById('driveFilesGrid');
+  grid.innerHTML = '<div class="spinner"></div>';
   try {
     const res = await fetch('/api/google/drive-files');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not load Drive folder');
     const files = data.files || [];
-    if (!files.length) { body.innerHTML = '<div class="result-empty">No files in the Drive folder yet.</div>'; return; }
-    body.innerHTML = `<div class="drive-file-grid">${files.map(f => `
-      <a class="drive-file-item" href="${esc(f.webViewLink)}" target="_blank" rel="noopener">
-        <img src="${esc(f.thumbnailLink || '')}" alt="" onerror="this.style.display='none'">
-        <div class="cap">
-          <span class="name">${esc(f.name)}</span>
-          <span class="meta">${f.size ? Math.round(f.size/1024)+' KB · ' : ''}${new Date(f.createdTime).toLocaleString()}</span>
-        </div>
-      </a>
-    `).join('')}</div>`;
+    if (!files.length) { grid.innerHTML = '<div class="result-empty">No files in the Drive folder yet.</div>'; return; }
+    grid.innerHTML = files.map(f => `
+      <div class="gallery-item" onclick="loadDriveFile('${esc(f.name)}')" title="Click to load into Generated Image">
+        <img src="/uploads/${esc(f.name)}" alt="" onerror="this.src='${esc(f.thumbnailLink||'')}'">
+        <div class="cap">${esc(f.name)}</div>
+      </div>
+    `).join('');
   } catch (e) {
-    body.innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+    grid.innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
   }
 }
 
-function closeDriveModal() {
-  document.getElementById('driveModalOverlay').classList.remove('open');
+// Every Drive-saved file is also the permanent local copy at the same
+// filename (that's what got uploaded), so we can reload it straight into
+// the results panel — same url used for display, regenerate, and publish.
+function loadDriveFile(filename) {
+  const url = `${window.location.origin}/uploads/${filename}`;
+  currentSet = [{ url, rawUrl: url, prompt: '(loaded from Google Drive)', label: null, size: null }];
+  renderResultSet();
+  toast('Loaded from Drive — ready to publish');
+  document.getElementById('resultPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function publishToLinkedIn() {
