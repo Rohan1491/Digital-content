@@ -213,13 +213,13 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
         </div>
 
         <div class="card publish-card" id="publishCard" style="display:none">
-          <h3>Approve &amp; Post to Instagram</h3>
+          <h3>Post to Instagram</h3>
           <div class="caption-row">
             <label style="text-transform:none;font-size:12px;color:var(--muted)">Caption</label>
             <button type="button" class="btn btn-sm" id="genCaptionBtn" onclick="generateCaption()">Generate caption</button>
           </div>
           <textarea id="fCaption" placeholder="Caption for the post... or click Generate caption"></textarea>
-          <button class="btn btn-publish" id="publishBtn" onclick="publishToInstagram()">Approve &amp; Post to Instagram</button>
+          <button class="btn btn-publish" id="publishBtn" onclick="openInstagramToPost()">Copy caption &amp; Open Instagram</button>
           <div class="publish-note" id="publishNote"></div>
         </div>
 
@@ -606,32 +606,26 @@ function updatePublishCard() {
   if (!currentSet.length) { card.style.display = 'none'; return; }
   card.style.display = 'block';
   note.textContent = currentSet.length === 1
-    ? 'Posts 1 image to your Instagram feed. This is a real, public action and can\'t be undone from here.'
-    : `Posts a ${currentSet.length}-image carousel to your Instagram feed, in this slide order. This is a real, public action and can't be undone from here.`;
+    ? 'Download the image above, copy the caption, then post it yourself on Instagram.'
+    : `Download the ${currentSet.length} carousel images above (in order), copy the caption, then post them yourself on Instagram.`;
 }
 
-async function publishToInstagram() {
-  if (!currentSet.length) return;
-  const kind = currentSet.length === 1 ? 'this image' : `this ${currentSet.length}-image carousel`;
-  if (!confirm(`Post ${kind} to Instagram now? This is public and can't be undone from here.`)) return;
-
+// Direct API publishing is unavailable (Meta account restriction) — this
+// copies the caption and opens Instagram so posting is a quick manual
+// paste instead of a fully separate workflow.
+async function openInstagramToPost() {
   const caption = document.getElementById('fCaption').value.trim();
-  const btn = document.getElementById('publishBtn');
-  btn.disabled = true; btn.textContent = 'Posting…';
-  try {
-    const res = await fetch('/api/instagram/publish', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ images: currentSet.map(s => s.url), caption }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Publish failed');
-    toast('Posted to Instagram!');
-    document.getElementById('publishNote').textContent = `Posted — media ID ${data.mediaId}`;
-  } catch (e) {
-    toast(e.message, 'error');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Approve & Post to Instagram';
+  if (caption) {
+    try {
+      await navigator.clipboard.writeText(caption);
+      toast('Caption copied — download the image, then paste in Instagram');
+    } catch (e) {
+      toast('Could not copy caption automatically — copy it manually below', 'error');
+    }
+  } else {
+    toast('Opening Instagram — download the image above first');
   }
+  window.open('https://www.instagram.com/', '_blank', 'noopener');
 }
 
 async function generateCaption() {
