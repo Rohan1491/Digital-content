@@ -18,12 +18,13 @@ Drive automatically.
    - `ANTHROPIC_API_KEY`, `BYTEPLUS_API_KEY`
    - Instagram (`IG_ACCESS_TOKEN`, `IG_USER_ID`) and LinkedIn OAuth app credentials
    - `DB_PATH` — point at the shared product-catalog SQLite DB (same one the CRM app uses), or leave unset to create a local `shopmanager.db`
-3. Google Drive (image backup):
-   - Create a Google Cloud service account, enable the Drive API, download its JSON key
-   - Save that key locally at the path set in `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` (default `./google-service-account.json`) — **never commit this file**, it's gitignored
-   - Share the target Drive folder with the key's `client_email` as Editor
-   - Set `GOOGLE_DRIVE_FOLDER_ID` to that folder's ID
+3. Google Drive (image backup) — OAuth, not a service-account key (blocked by
+   org policy on this account):
+   - In Google Cloud Console, create an OAuth client ID (Application type: Web application)
+   - Add `GOOGLE_REDIRECT_URI` (e.g. `http://localhost:4000/auth/google/callback`) as an authorized redirect URI on that client
+   - Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_DRIVE_FOLDER_ID` in `.env`
+   - Start the server, open the Content Generator page, click **Connect Google Drive** — this fills in `GOOGLE_REFRESH_TOKEN` automatically
 4. `npm start` — runs on `http://localhost:$PORT` (default 3000)
 
-Until the Drive service-account key is in place, image generation still
-works — the Drive save step is skipped silently.
+Until Google Drive is connected, image generation still works — the Drive
+save step is skipped silently.

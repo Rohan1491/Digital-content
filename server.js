@@ -535,6 +535,72 @@ app.post('/api/linkedin/publish', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Google Drive — OAuth (drive.file scope) ─────────────────────
+// Same pattern as LinkedIn above. Service-account keys were blocked by an
+// org policy (iam.managed.disableServiceAccountKeyCreation), so this uses
+// a one-time user consent flow instead — the refresh token it returns is
+// persisted to .env and used indefinitely (googleapis auto-refreshes the
+// short-lived access token from it on every call).
+let googleOAuthState = null; // single-user internal tool — one pending flow at a time is fine
+
+app.get('/auth/google', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  if (!clientId || !redirectUri) return res.status(400).send('Google Drive not configured — set GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_REDIRECT_URI in .env');
+  googleOAuthState = crypto.randomBytes(16).toString('hex');
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    access_type: 'offline', // required to get a refresh_token back
+    prompt: 'consent', // force a fresh refresh_token even if already granted before
+    state: googleOAuthState,
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query;
+    if (error) return res.status(400).send(`Google authorization failed: ${error_description || error}`);
+    if (!code) return res.status(400).send('Missing authorization code');
+    if (!state || state !== googleOAuthState) return res.status(400).send('State mismatch — start the connection again from the Content Generator page.');
+    googleOAuthState = null;
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      }).toString(),
+    });
+    const tokenJ = await tokenRes.json();
+    if (!tokenRes.ok || tokenJ.error) throw new Error(tokenJ.error_description || tokenJ.error || 'Token exchange failed');
+    if (!tokenJ.refresh_token) throw new Error('No refresh token returned — Google only issues one on first consent. Remove this app\'s access at myaccount.google.com/permissions, then connect again.');
+
+    updateEnvVar('GOOGLE_REFRESH_TOKEN', tokenJ.refresh_token);
+
+    res.send(`<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;padding:60px 20px;text-align:center;color:#1e293b">
+      <h2 style="color:#16a34a">Google Drive connected</h2>
+      <p>You can close this tab and go back to the Content Generator page.</p>
+    </body></html>`);
+  } catch (e) {
+    res.status(500).send(`Google Drive connection failed: ${e.message}`);
+  }
+});
+
+app.get('/api/google/status', (req, res) => {
+  res.json({
+    connected: !!process.env.GOOGLE_REFRESH_TOKEN,
+    configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REDIRECT_URI),
+  });
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(PORT, () => console.log(`Digital Content server running on http://localhost:${PORT}`));

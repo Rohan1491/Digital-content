@@ -174,6 +174,7 @@ textarea { resize:vertical; min-height:90px; line-height:1.5; }
           <textarea id="fPrompt" placeholder="Describe the image you want..." rows="8"></textarea>
         </div>
         <button class="btn btn-primary" id="genBtn" onclick="generateImage()">Generate</button>
+        <div class="li-status" id="driveStatus" style="margin-top:10px">Checking Google Drive connection…</div>
       </div>
 
       <div class="card">
@@ -750,6 +751,23 @@ async function checkLinkedInStatus() {
   }
 }
 
+async function checkGoogleDriveStatus() {
+  const el = document.getElementById('driveStatus');
+  try {
+    const res = await fetch('/api/google/status');
+    const data = await res.json();
+    if (data.connected) {
+      el.innerHTML = '<span class="dot on"></span> Google Drive connected — generated images are saved automatically';
+    } else if (data.configured) {
+      el.innerHTML = '<span class="dot"></span> Google Drive not connected — <a class="btn btn-sm" href="/auth/google" target="_blank" rel="noopener">Connect Google Drive</a>';
+    } else {
+      el.innerHTML = '<span class="dot"></span> Google Drive not configured (set GOOGLE_CLIENT_ID/SECRET in .env)';
+    }
+  } catch (e) {
+    el.textContent = 'Could not check Google Drive connection status';
+  }
+}
+
 async function publishToLinkedIn() {
   const text = document.getElementById('liPostText').value.trim();
   if (!text) { toast('Generate or write a post first', 'error'); return; }
@@ -805,6 +823,7 @@ function toast(msg, type='') {
 selectTemplate('post');
 loadProductsForRef();
 checkLinkedInStatus();
+checkGoogleDriveStatus();
 </script>
 <script src="js/nav.js"></script>
 </body>

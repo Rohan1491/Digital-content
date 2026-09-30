@@ -4,5 +4,4 @@ node_modules/
 *.log
 uploads/
 .firecrawl/
-google-service-account.json
 shopmanager.db
